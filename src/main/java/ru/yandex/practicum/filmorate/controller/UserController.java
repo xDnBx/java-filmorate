@@ -1,6 +1,8 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -12,7 +14,6 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,6 +21,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/users")
+@Validated
 public class UserController {
 
     private final Map<Long, User> users = new HashMap<>();
@@ -31,29 +33,15 @@ public class UserController {
     }
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
+    public User createUser(@Valid @RequestBody User user) {
         log.info("Добавление нового пользователя: {}", user.getLogin());
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            log.error("E-mail пустой");
-            throw new ValidationException("E-mail должен быть указан");
-        }
-        if (user.getLogin() == null || user.getLogin().isBlank()) {
-            log.error("Логин пустой");
-            throw new ValidationException("Логин должен быть указан");
-        }
-        if (user.getName() == null || user.getName().isBlank()) {
-            log.info("Имя пустое, в качестве имени будет использован логин пользователя");
-            user.setName(user.getLogin());
-        }
-        if (user.getBirthday() == null || user.getBirthday().isAfter(LocalDate.now())) {
-            log.error("Дата рождения пустая или указана неверно");
-            throw new ValidationException("Дата рождения должна быть указана или она указана неверно");
-        }
         if (users.containsKey(user.getEmail())) {
             log.error("E-mail уже присутствует у другого пользователя");
             throw new DuplicatedDataException("Этот e-mail уже используется");
         }
-
+        if (user.getName() == null) {
+            user.setName(user.getLogin());
+        }
         user.setId(getNextId());
         users.put(user.getId(), user);
         log.info("Пользователь с id = {} успешно добавлен!", user.getId());
@@ -61,7 +49,7 @@ public class UserController {
     }
 
     @PutMapping
-    public User updateUser(@RequestBody User newUser) {
+    public User updateUser(@Valid @RequestBody User newUser) {
         log.info("Обновление пользователя с id = {}", newUser.getId());
         if (newUser.getId() == null) {
             log.error("id пользователя не указан");
@@ -77,22 +65,15 @@ public class UserController {
         }
 
         User oldUser = users.get(newUser.getId());
-
-        if (newUser.getEmail() != null) {
-            oldUser.setEmail(newUser.getEmail());
-        }
-        if (newUser.getLogin() != null) {
-            oldUser.setLogin(newUser.getLogin());
-        }
-        if (newUser.getName() != null) {
+        oldUser.setEmail(newUser.getEmail());
+        oldUser.setLogin(newUser.getLogin());
+        if (newUser.getName() == null) {
+            oldUser.setName(newUser.getLogin());
+        } else {
             oldUser.setName(newUser.getName());
         }
-        if (newUser.getBirthday() == null || newUser.getBirthday().isAfter(LocalDate.now())) {
-            log.error("Дата рождения пустая или указана неверно");
-            throw new ValidationException("Дата рождения должна быть указана или она указана неверно");
-        } else {
-            oldUser.setBirthday(newUser.getBirthday());
-        }
+        oldUser.setBirthday(newUser.getBirthday());
+
         log.info("Обновление пользователя с id = {} прошло успешно!", newUser.getId());
         return oldUser;
     }

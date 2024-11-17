@@ -36,8 +36,8 @@ public class UserController {
     @PostMapping
     public User createUser(@Valid @RequestBody User user) {
         log.info("Добавление нового пользователя: {}", user.getLogin());
-        for (Map.Entry<Long, User> mapEntries : users.entrySet()) {
-            if (mapEntries.getValue().getEmail().equals(user.getEmail())) {
+        for (User newUser : users.values()) {
+            if (newUser.getEmail().equals(user.getEmail())) {
                 log.error("E-mail уже присутствует у другого пользователя");
                 throw new DuplicatedDataException("Этот e-mail уже используется");
             }
@@ -58,8 +58,8 @@ public class UserController {
             log.error("id пользователя не указан");
             throw new ValidationException("Id должен быть указан");
         }
-        for (Map.Entry<Long, User> mapEntries : users.entrySet()) {
-            if (mapEntries.getValue().getEmail().equals(newUser.getEmail())) {
+        for (User user : users.values()) {
+            if (user.getEmail().equals(newUser.getEmail())) {
                 log.error("E-mail уже присутствует у другого пользователя");
                 throw new DuplicatedDataException("Этот e-mail уже используется");
             }

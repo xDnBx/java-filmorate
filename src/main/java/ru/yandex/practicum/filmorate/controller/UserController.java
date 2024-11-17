@@ -24,6 +24,7 @@ import java.util.Map;
 @Validated
 public class UserController {
 
+    private long id = 1;
     private final Map<Long, User> users = new HashMap<>();
 
     @GetMapping
@@ -35,14 +36,16 @@ public class UserController {
     @PostMapping
     public User createUser(@Valid @RequestBody User user) {
         log.info("Добавление нового пользователя: {}", user.getLogin());
-        if (users.containsKey(user.getEmail())) {
-            log.error("E-mail уже присутствует у другого пользователя");
-            throw new DuplicatedDataException("Этот e-mail уже используется");
+        for (Map.Entry<Long, User> mapEntries : users.entrySet()) {
+            if (mapEntries.getValue().getEmail().equals(user.getEmail())) {
+                log.error("E-mail уже присутствует у другого пользователя");
+                throw new DuplicatedDataException("Этот e-mail уже используется");
+            }
         }
         if (user.getName() == null) {
             user.setName(user.getLogin());
         }
-        user.setId(getNextId());
+        user.setId(generateNewId());
         users.put(user.getId(), user);
         log.info("Пользователь с id = {} успешно добавлен!", user.getId());
         return user;
@@ -55,9 +58,11 @@ public class UserController {
             log.error("id пользователя не указан");
             throw new ValidationException("Id должен быть указан");
         }
-        if (users.containsKey(newUser.getEmail())) {
-            log.error("E-mail уже присутствует у другого пользователя");
-            throw new DuplicatedDataException("Этот e-mail уже используется");
+        for (Map.Entry<Long, User> mapEntries : users.entrySet()) {
+            if (mapEntries.getValue().getEmail().equals(newUser.getEmail())) {
+                log.error("E-mail уже присутствует у другого пользователя");
+                throw new DuplicatedDataException("Этот e-mail уже используется");
+            }
         }
         if (!users.containsKey(newUser.getId())) {
             log.error("Пользователя с данным id не существует");
@@ -78,12 +83,7 @@ public class UserController {
         return oldUser;
     }
 
-    private long getNextId() {
-        long currentMaxId = users.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    private long generateNewId() {
+        return id++;
     }
 }

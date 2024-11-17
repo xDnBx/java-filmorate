@@ -23,6 +23,7 @@ import java.util.Map;
 @Validated
 public class FilmController {
 
+    private long id = 1;
     private final Map<Long, Film> films = new HashMap<>();
 
     @GetMapping
@@ -34,7 +35,7 @@ public class FilmController {
     @PostMapping
     public Film createFilm(@Valid @RequestBody Film film) {
         log.info("Добавление нового фильма: {}", film.getName());
-        film.setId(getNextId());
+        film.setId(generateNewId());
         films.put(film.getId(), film);
         log.info("Фильм с id = {} успешно добавлен!", film.getId());
         return film;
@@ -62,12 +63,7 @@ public class FilmController {
         return oldFilm;
     }
 
-    private long getNextId() {
-        long currentMaxId = films.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    private long generateNewId() {
+        return id++;
     }
 }

@@ -7,6 +7,6 @@ public class StringSpaceValidator implements ConstraintValidator<StringSpace, St
 
     @Override
     public boolean isValid(String login, ConstraintValidatorContext constraintValidatorContext) {
-        return login != null && !login.contains(" ");
+        return (login != null) && !(login.contains(" ") || login.contains("\t") || login.contains("\n"));
     }
 }

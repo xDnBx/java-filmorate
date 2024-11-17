@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
@@ -29,11 +30,11 @@ class UserControllerTest {
     ObjectMapper objectMapper;
 
     private User user;
+    UserController userController = new UserController();
 
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         user = User.builder()
-                .id(2L)
                 .email("mail@yandex.ru")
                 .login("yandex")
                 .name("Yandex Practicum")
@@ -43,17 +44,9 @@ class UserControllerTest {
 
     @Test
     void shouldReturnOkWhenCreateAndUpdateUser() throws Exception {
-        User newUser = user.toBuilder().email("mail1@yandex.ru").name("Yandex Practicum 2").build();
+        User newUser = user.toBuilder().id(2L).email("mail1@yandex.ru").name("Yandex Practicum 2").build();
+        User newUser1 = user.toBuilder().id(2L).email("mail2@yandex.ru").name("Yandex Practicum 3").build();
         mockMvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(user)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(2))
-                .andExpect(jsonPath("$.email").value("mail@yandex.ru"))
-                .andExpect(jsonPath("$.login").value("yandex"))
-                .andExpect(jsonPath("$.name").value("Yandex Practicum"))
-                .andExpect(jsonPath("$.birthday").value("1990-05-28"));
-        mockMvc.perform(put("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newUser)))
                 .andExpect(status().isOk())
@@ -61,6 +54,15 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value("mail1@yandex.ru"))
                 .andExpect(jsonPath("$.login").value("yandex"))
                 .andExpect(jsonPath("$.name").value("Yandex Practicum 2"))
+                .andExpect(jsonPath("$.birthday").value("1990-05-28"));
+        mockMvc.perform(put("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newUser1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(2))
+                .andExpect(jsonPath("$.email").value("mail2@yandex.ru"))
+                .andExpect(jsonPath("$.login").value("yandex"))
+                .andExpect(jsonPath("$.name").value("Yandex Practicum 3"))
                 .andExpect(jsonPath("$.birthday").value("1990-05-28"));
     }
 

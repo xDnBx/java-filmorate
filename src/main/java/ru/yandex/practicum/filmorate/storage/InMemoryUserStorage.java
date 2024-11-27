@@ -131,11 +131,6 @@ public class InMemoryUserStorage implements UserStorage {
                 .toList();
     }
 
-    @Override
-    public Map<Long, User> getUsers() {
-        return users;
-    }
-
     private long generateNewId() {
         return id++;
     }

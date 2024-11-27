@@ -7,7 +7,6 @@ import ru.yandex.practicum.filmorate.exception.NegativeCountException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -58,7 +57,7 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public void addLike(Long id, Long userId) {
-        checkUser(userId);
+        userStorage.getUserById(userId);
 
         Film film = getFilmById(id);
         film.getLikes().add(userId);
@@ -66,7 +65,7 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public void deleteLike(Long id, Long userId) {
-        checkUser(userId);
+        userStorage.getUserById(userId);
 
         Film film = getFilmById(id);
 
@@ -102,18 +101,6 @@ public class InMemoryFilmStorage implements FilmStorage {
         if (!films.containsKey(id)) {
             log.error("Фильм с id = {} не найден", id);
             throw new NotFoundException("Фильма с таким id не найдено");
-        }
-    }
-
-    private void checkUser(Long id) {
-        Map<Long, User> users = userStorage.getUsers();
-        if (id == null) {
-            log.error("id пользователя не указан");
-            throw new ValidationException("Id должен быть указан");
-        }
-        if (!users.containsKey(id)) {
-            log.error("Пользователя с данным id не существует");
-            throw new NotFoundException("Пользователь с данным id не найден");
         }
     }
 }

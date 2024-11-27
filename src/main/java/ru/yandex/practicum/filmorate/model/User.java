@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 import ru.yandex.practicum.filmorate.validation.StringSpace;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Builder(toBuilder = true)
@@ -30,4 +32,6 @@ public class User {
 
     @PastOrPresent(message = "Дата рождения указана неверно")
     private LocalDate birthday;
+
+    private Set<Long> friends = new HashSet<>();
 }

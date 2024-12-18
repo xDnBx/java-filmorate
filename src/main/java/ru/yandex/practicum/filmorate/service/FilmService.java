@@ -4,7 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.GenreStorage;
+import ru.yandex.practicum.filmorate.storage.MpaStorage;
 
 import java.util.Collection;
 import java.util.List;
@@ -14,6 +18,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FilmService {
     private final FilmStorage filmStorage;
+    private final MpaStorage mpaStorage;
+    private final GenreStorage genreStorage;
 
     public Collection<Film> getAllFilms() {
         log.info("Получение списка всех фильмов");
@@ -48,5 +54,25 @@ public class FilmService {
     public List<Film> getPopularFilms(Long count) {
         log.info("Получение списка из {} популярных фильмов", count);
         return filmStorage.getPopularFilms(count);
+    }
+
+    public Collection<Mpa> getAllMpa() {
+        log.info("Получение списка всех рейтингов");
+        return mpaStorage.getAllMpa();
+    }
+
+    public Mpa getMpaById(Integer id) {
+        log.info("Получение рейтинга с id = {}", id);
+        return mpaStorage.getMpaById(id);
+    }
+
+    public Collection<Genre> getAllGenres() {
+        log.info("Получение списка всех жанров");
+        return genreStorage.getAllGenres();
+    }
+
+    public Genre getGenreById(Integer id) {
+        log.info("Получение жанра с id = {}", id);
+        return genreStorage.getGenreById(id);
     }
 }

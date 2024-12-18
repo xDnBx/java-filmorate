@@ -15,10 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS friends (
-  user_id INTEGER NOT NULL,
-  friend_id INTEGER NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (friend_id) REFERENCES users(id)
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  friend_id INTEGER NOT NULL REFERENCES users(id),
+  PRIMARY KEY (user_id, friend_id)
 );
 
 CREATE TABLE IF NOT EXISTS mpa (

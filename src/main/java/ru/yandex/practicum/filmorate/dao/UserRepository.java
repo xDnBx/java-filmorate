@@ -9,7 +9,6 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.UserMapper;
-import ru.yandex.practicum.filmorate.exception.AlreadyFriendsException;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
@@ -18,9 +17,7 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 @Repository
 @Slf4j
@@ -29,9 +26,9 @@ import java.util.Set;
 public class UserRepository implements UserStorage {
     private static final String GET_ALL_QUERY = "SELECT * FROM users";
     private static final String INSERT_QUERY = "INSERT INTO users(email, login, name, birthday)" +
-            "VALUES (?, ?, ?, ?)";
+            " VALUES (?, ?, ?, ?)";
     private static final String UPDATE_QUERY = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ?" +
-            "WHERE id = ?";
+            " WHERE id = ?";
     private static final String FIND_BY_ID_QUERY = "SELECT * FROM users WHERE id = ?";
 
     private final JdbcTemplate jdbc;
@@ -72,6 +69,7 @@ public class UserRepository implements UserStorage {
 
     @Override
     public User updateUser(User newUser) {
+        getUserById(newUser.getId());
         try {
             jdbc.update(UPDATE_QUERY, newUser.getEmail(), newUser.getLogin(), newUser.getName(),
                     newUser.getBirthday().toString(), newUser.getId());
@@ -91,54 +89,5 @@ public class UserRepository implements UserStorage {
             log.error("Ошибка при поиске пользователя");
             throw new NotFoundException("Пользователь с данным id не найден");
         }
-    }
-
-    @Override
-    public void addFriend(Long id, Long friendId) {
-        User user = getUserById(id);
-        User friend = getUserById(friendId);
-
-        if (user.getFriends().contains(friendId)) {
-            log.error("Пользователи уже друзья");
-            throw new AlreadyFriendsException("Пользователи уже являются друзьями");
-        }
-
-        user.getFriends().add(friendId);
-        friend.getFriends().add(id);
-        log.info("Пользователи с id = {} и id = {} теперь друзья!", id, friendId);
-    }
-
-    @Override
-    public void deleteFriend(Long id, Long friendId) {
-        User user = getUserById(id);
-        User friend = getUserById(friendId);
-
-        user.getFriends().remove(friendId);
-        friend.getFriends().remove(id);
-        log.info("Пользователи с id = {} и id = {} теперь не друзья", id, friendId);
-    }
-
-    @Override
-    public List<User> getFriends(Long id) {
-        User user = getUserById(id);
-        return user.getFriends().stream()
-                .map(this::getUserById)
-                .toList();
-    }
-
-    @Override
-    public List<User> getCommonFriends(Long id, Long otherId) {
-        Set<Long> user = getUserById(id).getFriends();
-        Set<Long> friend = getUserById(otherId).getFriends();
-
-        if (user.isEmpty() || friend.isEmpty()) {
-            log.error("У пользователей нет друзей");
-            throw new NotFoundException("У данных пользователей отсутствуют друзья");
-        }
-
-        return user.stream()
-                .filter(friend::contains)
-                .map(this::getUserById)
-                .toList();
     }
 }

@@ -36,8 +36,8 @@ CREATE TABLE IF NOT EXISTS films (
   description VARCHAR NOT NULL,
   release_date DATE NOT NULL,
   duration INTEGER NOT NULL,
-  MPA_id INTEGER NOT NULL,
-  FOREIGN KEY (MPA_id) REFERENCES mpa(id)
+  mpa_id INTEGER NOT NULL,
+  FOREIGN KEY (mpa_id) REFERENCES mpa(id)
 );
 
 CREATE TABLE IF NOT EXISTS films_genres (

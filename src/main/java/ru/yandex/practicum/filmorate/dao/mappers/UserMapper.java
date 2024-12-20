@@ -10,11 +10,12 @@ import java.util.HashSet;
 @Component
 public class UserMapper {
     public static User mapToUser(ResultSet resultSet, int rowNum) throws SQLException {
-        return new User(resultSet.getLong("id"),
-                        resultSet.getString("email"),
-                        resultSet.getString("login"),
-                        resultSet.getString("name"),
-                        resultSet.getDate("birthday").toLocalDate(),
-                        new HashSet<>());
+        return User.builder().id(resultSet.getLong("id"))
+                .email(resultSet.getString("email"))
+                .login(resultSet.getString("login"))
+                .name(resultSet.getString("name"))
+                .birthday(resultSet.getDate("birthday").toLocalDate())
+                .friends(new HashSet<>())
+                .build();
     }
 }

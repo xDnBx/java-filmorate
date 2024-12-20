@@ -9,6 +9,8 @@ import java.sql.SQLException;
 @Component
 public class MpaMapper {
     public static Mpa mapToMpa(ResultSet resultSet, int rowNum) throws SQLException {
-        return new Mpa(resultSet.getInt("id"), resultSet.getString("name"));
+        return Mpa.builder().id(resultSet.getInt("id"))
+                .name(resultSet.getString("name"))
+                .build();
     }
 }

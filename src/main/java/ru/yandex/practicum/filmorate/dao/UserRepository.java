@@ -25,7 +25,7 @@ import java.util.Objects;
 @Primary
 public class UserRepository implements UserStorage {
     private static final String GET_ALL_QUERY = "SELECT * FROM users";
-    private static final String INSERT_QUERY = "INSERT INTO users(email, login, name, birthday)" +
+    private static final String INSERT_QUERY = "INSERT INTO users (email, login, name, birthday)" +
             " VALUES (?, ?, ?, ?)";
     private static final String UPDATE_QUERY = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ?" +
             " WHERE id = ?";

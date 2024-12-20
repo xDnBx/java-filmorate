@@ -9,6 +9,8 @@ import java.sql.SQLException;
 @Component
 public class GenreMapper {
     public static Genre mapToGenre(ResultSet resultSet, int rowNum) throws SQLException {
-        return new Genre(resultSet.getInt("id"), resultSet.getString("name"));
+        return Genre.builder().id(resultSet.getInt("id"))
+                .name(resultSet.getString("name"))
+                .build();
     }
 }

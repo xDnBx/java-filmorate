@@ -52,7 +52,11 @@ public class UserRepository implements UserStorage {
                 PreparedStatement ps = connection.prepareStatement(INSERT_QUERY, Statement.RETURN_GENERATED_KEYS);
                 ps.setString(1, user.getEmail());
                 ps.setString(2, user.getLogin());
-                ps.setString(3, user.getName());
+                if (user.getName() == null) {
+                    ps.setString(3, user.getLogin());
+                } else {
+                    ps.setString(3, user.getName());
+                }
                 ps.setString(4, user.getBirthday().toString());
                 return ps;
             }, keyHolder);

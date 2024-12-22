@@ -92,8 +92,8 @@ public class FilmRepository implements FilmStorage {
             log.info("Фильм с id = {} успешно добавлен!", film.getId());
             return film;
         } catch (Exception e) {
-            log.error("Ошибка при добавлении пользователя");
-            throw new InternalServerException("Ошибка при добавлении пользователя");
+            log.error("Ошибка при добавлении фильма");
+            throw new InternalServerException("Ошибка при добавлении фильма");
         }
     }
 

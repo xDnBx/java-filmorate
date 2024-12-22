@@ -34,6 +34,8 @@ public class Film {
 
     @Positive(message = "Продолжительность должна быть больше нуля")
     private Integer duration;
+
+    @NotNull
     private Mpa mpa;
     private LinkedHashSet<Genre> genres = new LinkedHashSet<>();
 

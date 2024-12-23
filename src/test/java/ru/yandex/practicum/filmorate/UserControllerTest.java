@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Data;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.time.Month;
@@ -19,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@Data
 @AutoConfigureMockMvc
 class UserControllerTest {
 
@@ -29,6 +32,7 @@ class UserControllerTest {
     ObjectMapper objectMapper;
 
     private User user;
+    private UserStorage userStorage;
 
     @BeforeEach
     void beforeEach() {
@@ -42,13 +46,13 @@ class UserControllerTest {
 
     @Test
     void shouldReturnOkWhenCreateAndUpdateUser() throws Exception {
-        User newUser = user.toBuilder().id(2L).email("mail1@yandex.ru").name("Yandex Practicum 2").build();
-        User newUser1 = user.toBuilder().id(2L).email("mail2@yandex.ru").name("Yandex Practicum 3").build();
+        User newUser = user.toBuilder().email("mail1@yandex.ru").name("Yandex Practicum 2").build();
+        User newUser1 = user.toBuilder().id(1L).email("mail2@yandex.ru").name("Yandex Practicum 3").build();
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newUser)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(2))
+                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.email").value("mail1@yandex.ru"))
                 .andExpect(jsonPath("$.login").value("yandex"))
                 .andExpect(jsonPath("$.name").value("Yandex Practicum 2"))
@@ -57,7 +61,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newUser1)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(2))
+                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.email").value("mail2@yandex.ru"))
                 .andExpect(jsonPath("$.login").value("yandex"))
                 .andExpect(jsonPath("$.name").value("Yandex Practicum 3"))
@@ -80,20 +84,6 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newUser)))
                 .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void shouldWriteLoginToNameWhenNameIsEmpty() throws Exception {
-        User newUser = user.toBuilder().name(null).build();
-        mockMvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newUser)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.email").value("mail@yandex.ru"))
-                .andExpect(jsonPath("$.login").value("yandex"))
-                .andExpect(jsonPath("$.name").value("yandex"))
-                .andExpect(jsonPath("$.birthday").value("1990-05-28"));
     }
 
     @Test

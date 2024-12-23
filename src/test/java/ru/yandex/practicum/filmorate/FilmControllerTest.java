@@ -9,14 +9,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Mpa;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.LinkedHashSet;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -33,17 +35,18 @@ class FilmControllerTest {
     @BeforeEach
     public void beforeEach() {
         film = Film.builder()
-                .id(1L)
                 .name("Film 1")
                 .description("Description 1")
                 .releaseDate(LocalDate.of(1990, Month.MAY, 28))
                 .duration(150)
+                .mpa(Mpa.builder().id(1).build())
+                .genres(new LinkedHashSet<>())
                 .build();
     }
 
     @Test
     void shouldReturnOkWhenCreateAndUpdateFilm() throws Exception {
-        Film newFilm = film.toBuilder().name("Film 2").build();
+        Film newFilm = film.toBuilder().id(1L).name("Film 2").build();
         mockMvc.perform(post("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))

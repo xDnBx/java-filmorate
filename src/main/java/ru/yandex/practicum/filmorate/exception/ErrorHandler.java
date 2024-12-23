@@ -43,4 +43,10 @@ public class ErrorHandler {
     public ErrorResponse handleAlreadyFriends(AlreadyFriendsException e) {
         return new ErrorResponse("Already friends", e.getMessage());
     }
+
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInternalServer(InternalServerException e) {
+        return new ErrorResponse("Error with someone", e.getMessage());
+    }
 }

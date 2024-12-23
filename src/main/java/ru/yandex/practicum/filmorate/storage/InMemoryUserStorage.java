@@ -17,7 +17,7 @@ import java.util.Set;
 
 @Slf4j
 @Component
-public class InMemoryUserStorage implements UserStorage {
+public class InMemoryUserStorage implements UserStorage, FriendsStorage {
     private long id = 1;
     private final Map<Long, User> users = new HashMap<>();
 

@@ -8,10 +8,12 @@ import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.GenreMapper;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.GenreStorage;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 
 @Repository
 @Slf4j
@@ -38,6 +40,21 @@ public class GenreRepository implements GenreStorage {
         } catch (EmptyResultDataAccessException e) {
             log.error("Ошибка при поиске жанра");
             throw new NotFoundException("Жанр с данным id не найден");
+        }
+    }
+
+    @Override
+    public void checkGenres(LinkedHashSet<Genre> genres) {
+        if (genres == null || genres.isEmpty()) {
+            return;
+        }
+        try {
+            for (Genre genre : genres) {
+                jdbc.queryForObject(FIND_BY_ID_QUERY, GenreMapper::mapToGenre, genre.getId());
+            }
+        } catch (EmptyResultDataAccessException e) {
+            log.error("Ошибка при поиске жанра");
+            throw new ValidationException("Жанр с данным id не найден");
         }
     }
 }

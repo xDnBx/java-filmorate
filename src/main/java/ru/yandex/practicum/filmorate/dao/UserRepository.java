@@ -32,7 +32,6 @@ public class UserRepository implements UserStorage {
     private static final String FIND_BY_ID_QUERY = "SELECT * FROM users WHERE id = ?";
 
     private final JdbcTemplate jdbc;
-    private final UserMapper userMapper;
 
     @Override
     public Collection<User> getAllUsers() {
@@ -52,11 +51,7 @@ public class UserRepository implements UserStorage {
                 PreparedStatement ps = connection.prepareStatement(INSERT_QUERY, Statement.RETURN_GENERATED_KEYS);
                 ps.setString(1, user.getEmail());
                 ps.setString(2, user.getLogin());
-                if (user.getName() == null) {
-                    ps.setString(3, user.getLogin());
-                } else {
-                    ps.setString(3, user.getName());
-                }
+                ps.setString(3, user.getName());
                 ps.setString(4, user.getBirthday().toString());
                 return ps;
             }, keyHolder);

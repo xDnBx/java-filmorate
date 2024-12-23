@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.MpaMapper;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.MpaStorage;
 
@@ -36,8 +37,18 @@ public class MpaRepository implements MpaStorage {
         try {
             return jdbc.queryForObject(FIND_BY_ID_QUERY, MpaMapper::mapToMpa, id);
         } catch (EmptyResultDataAccessException e) {
-            log.error("Ошибка при поиске рейтинга");
+            log.error("Ошибка при поиске по id рейтинга");
             throw new NotFoundException("Рейтинг с данным id не найден");
+        }
+    }
+
+    @Override
+    public void checkMpa(Integer id) {
+        try {
+            jdbc.queryForObject(FIND_BY_ID_QUERY, MpaMapper::mapToMpa, id);
+        } catch (EmptyResultDataAccessException e) {
+            log.error("Ошибка при поиске рейтинга");
+            throw new ValidationException("Рейтинг не найден");
         }
     }
 }

@@ -6,9 +6,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.UserMapper;
-import ru.yandex.practicum.filmorate.exception.AlreadyFriendsException;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FriendsStorage;
 
@@ -20,9 +18,6 @@ import java.util.List;
 @Primary
 public class FriendsRepository implements FriendsStorage {
     private static final String INSERT_QUERY = "INSERT INTO friends(user_id, friend_id) VALUES (?, ?)";
-    private static final String FIND_BY_ID_QUERY = "SELECT COUNT(*) FROM users WHERE id = ?";
-    private static final String FIND_FRIENDS_QUERY = "SELECT COUNT(*) FROM friends WHERE" +
-            " (user_id = ? AND friend_id = ?) AND (friend_id = ? AND user_id = ?)";
     private static final String FIND_USER_FRIENDS_QUERY = "SELECT u.* FROM users AS u" +
             " JOIN friends AS f ON u.id = f.friend_id WHERE f.user_id = ?";
     private static final String FIND_COMMON_FRIENDS_QUERY = "SELECT u.* FROM users AS u" +
@@ -34,16 +29,7 @@ public class FriendsRepository implements FriendsStorage {
 
     @Override
     public void addFriend(Long id, Long friendId) {
-        checkUser(id);
-        checkUser(friendId);
         try {
-
-            Integer count = jdbc.queryForObject(FIND_FRIENDS_QUERY, Integer.class, id, friendId, id, friendId);
-            if (count > 0) {
-                log.error("Пользователи уже друзья");
-                throw new AlreadyFriendsException("Пользователи уже являются друзьями");
-            }
-
             jdbc.update(INSERT_QUERY, id, friendId);
         } catch (Exception e) {
             log.error("Ошибка при добавлении друга");
@@ -53,8 +39,6 @@ public class FriendsRepository implements FriendsStorage {
 
     @Override
     public void deleteFriend(Long id, Long friendId) {
-        checkUser(id);
-        checkUser(friendId);
         try {
             jdbc.update(DELETE_QUERY, id, friendId);
         } catch (Exception e) {
@@ -65,7 +49,6 @@ public class FriendsRepository implements FriendsStorage {
 
     @Override
     public List<User> getFriends(Long id) {
-        checkUser(id);
         try {
             return jdbc.query(FIND_USER_FRIENDS_QUERY, UserMapper::mapToUser, id);
         } catch (Exception e) {
@@ -76,21 +59,11 @@ public class FriendsRepository implements FriendsStorage {
 
     @Override
     public List<User> getCommonFriends(Long id, Long otherId) {
-        checkUser(id);
-        checkUser(otherId);
         try {
             return jdbc.query(FIND_COMMON_FRIENDS_QUERY, UserMapper::mapToUser, id, otherId);
         } catch (Exception e) {
             log.error("Ошибка при поиске общих друзей пользователей");
             throw new InternalServerException("Ошибка при поиске общих друзей пользователей");
-        }
-    }
-
-    private void checkUser(Long id) {
-        Integer idCount = jdbc.queryForObject(FIND_BY_ID_QUERY, Integer.class, id);
-        if (idCount == 0) {
-            log.error("Пользователя с id {} не существует", id);
-            throw new NotFoundException("Пользователь с данным id не найден");
         }
     }
 }

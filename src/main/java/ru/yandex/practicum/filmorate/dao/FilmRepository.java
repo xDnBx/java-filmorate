@@ -11,14 +11,11 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.FilmMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.GenreMapper;
-import ru.yandex.practicum.filmorate.dao.mappers.MpaMapper;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -48,15 +45,11 @@ public class FilmRepository implements FilmStorage {
             " f.mpa_id, m.name AS mpa_name FROM films AS f JOIN mpa AS m ON f.mpa_id = m.id WHERE f.id = ?";
     private static final String FIND_GENRES_QUERY = "SELECT g.id, g.name FROM films_genres AS f" +
             " JOIN genres AS g ON f.genre_id = g.id WHERE f.film_id = ?";
-    private static final String FIND_GENRES_ID_QUERY = "SELECT * FROM genres WHERE id = ?";
-    private static final String FIND_MPA_ID_QUERY = "SELECT * FROM mpa WHERE id = ?";
     private static final String INSERT_LIKE_QUERY = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
     private static final String DELETE_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
     private static final String DELETE_GENRES_QUERY = "DELETE FROM films_genres WHERE film_id = ?";
 
     private final JdbcTemplate jdbc;
-    private final FilmMapper filmMapper;
-    private final UserStorage userStorage;
 
     @Override
     public Collection<Film> getAllFilms() {
@@ -72,8 +65,6 @@ public class FilmRepository implements FilmStorage {
 
     @Override
     public Film createFilm(Film film) {
-        checkMpa(film.getMpa().getId());
-        checkGenres(film.getGenres());
         KeyHolder keyHolder = new GeneratedKeyHolder();
         try {
             jdbc.update(connection -> {
@@ -99,12 +90,10 @@ public class FilmRepository implements FilmStorage {
 
     @Override
     public Film updateFilm(Film newFilm) {
-        checkMpa(newFilm.getMpa().getId());
-        checkGenres(newFilm.getGenres());
-        getFilmById(newFilm.getId());
         try {
             jdbc.update(UPDATE_QUERY, newFilm.getName(), newFilm.getDescription(), newFilm.getReleaseDate().toString(),
                     newFilm.getDuration(), newFilm.getMpa().getId(), newFilm.getId());
+            addGenresToFilm(newFilm);
             log.info("Обновление фильма с id = {} прошло успешно!", newFilm.getId());
             return getFilmById(newFilm.getId());
         } catch (Exception e) {
@@ -117,7 +106,7 @@ public class FilmRepository implements FilmStorage {
     public Film getFilmById(Long id) {
         try {
             return jdbc.queryForObject(FIND_ID_QUERY, ((resultSet, rowNum) -> {
-                Film film = filmMapper.mapToFilm(resultSet, rowNum);
+                Film film = FilmMapper.mapToFilm(resultSet, rowNum);
                 film.setGenres(getFilmGenres(id));
                 return film;
             }), id);
@@ -129,7 +118,6 @@ public class FilmRepository implements FilmStorage {
 
     @Override
     public void addLike(Long id, Long userId) {
-        userStorage.getUserById(userId);
         try {
             jdbc.update(INSERT_LIKE_QUERY, id, userId);
             log.info("Пользователь с id = {} поставил лайк фильму с id = {}", userId, id);
@@ -141,7 +129,6 @@ public class FilmRepository implements FilmStorage {
 
     @Override
     public void deleteLike(Long id, Long userId) {
-        userStorage.getUserById(userId);
         try {
             jdbc.update(DELETE_LIKE_QUERY, id, userId);
             log.info("Пользователь с id = {} удалил лайк фильму с id = {}", userId, id);
@@ -160,29 +147,6 @@ public class FilmRepository implements FilmStorage {
         } catch (Exception e) {
             log.error("Ошибка при получении списка популярных фильмов");
             throw new InternalServerException("Ошибка при получении списка популярных фильмов");
-        }
-    }
-
-    private void checkMpa(Integer id) {
-        try {
-            jdbc.queryForObject(FIND_MPA_ID_QUERY, MpaMapper::mapToMpa, id);
-        } catch (EmptyResultDataAccessException e) {
-            log.error("Ошибка при поиске рейтинга");
-            throw new ValidationException("Рейтинг с данным id не найден");
-        }
-    }
-
-    private void checkGenres(LinkedHashSet<Genre> genres) {
-        if (genres == null || genres.isEmpty()) {
-            return;
-        }
-        try {
-            for (Genre genre : genres) {
-                jdbc.queryForObject(FIND_GENRES_ID_QUERY, GenreMapper::mapToGenre, genre.getId());
-            }
-        } catch (EmptyResultDataAccessException e) {
-            log.error("Ошибка при поиске жанра");
-            throw new ValidationException("Жанр с данным id не найден");
         }
     }
 

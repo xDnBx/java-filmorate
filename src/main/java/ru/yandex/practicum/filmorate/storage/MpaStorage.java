@@ -8,4 +8,6 @@ public interface MpaStorage {
     Collection<Mpa> getAllMpa();
 
     Mpa getMpaById(Integer id);
+
+    void checkMpa(Integer id);
 }

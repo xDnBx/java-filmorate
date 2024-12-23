@@ -51,8 +51,8 @@ class FilmorateApplicationTests {
 
     @Test
     public void testGetAllUsers() {
-        User newUser = user.toBuilder().email("mail1@yandex.ru").name("Yandex Practicum 2").build();
-        User anotherUser = user.toBuilder().email("mail2@yandex.ru").name("Yandex Practicum 3").build();
+        User newUser = user.toBuilder().email("mail1@yandex.ru").login("yan").name("Yandex Practicum 2").build();
+        User anotherUser = user.toBuilder().email("mail2@yandex.ru").login("ya").name("Yandex Practicum 3").build();
         userRepository.createUser(user);
         userRepository.createUser(newUser);
         userRepository.createUser(anotherUser);

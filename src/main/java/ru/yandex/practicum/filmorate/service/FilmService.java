@@ -60,6 +60,11 @@ public class FilmService {
         filmStorage.deleteLike(id, userId);
     }
 
+    public List<Film> getCommonFilm(Long userId1, Long userId2) {
+        log.info("Получение списка общих фильмов для пользователей: {}, {}", userId1, userId2);
+        return filmStorage.getCommonFilms(userId1, userId2);
+    }
+
     public List<Film> getPopularFilms(Long count, Integer genreId, Integer year) {
         log.info("Получение списка из {} популярных фильмов", count);
         return filmStorage.getPopularFilms(count, genreId, year);

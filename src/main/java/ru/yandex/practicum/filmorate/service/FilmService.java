@@ -60,9 +60,9 @@ public class FilmService {
         filmStorage.deleteLike(id, userId);
     }
 
-    public List<Film> getPopularFilms(Long count) {
+    public List<Film> getPopularFilms(Long count, Integer genreId, Integer year) {
         log.info("Получение списка из {} популярных фильмов", count);
-        return filmStorage.getPopularFilms(count);
+        return filmStorage.getPopularFilms(count, genreId, year);
     }
 
     public Collection<Mpa> getAllMpa() {

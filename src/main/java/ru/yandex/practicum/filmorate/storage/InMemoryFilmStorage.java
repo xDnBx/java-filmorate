@@ -78,7 +78,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public List<Film> getPopularFilms(Long count) {
+    public List<Film> getPopularFilms(Long count, Integer genreId, Integer year) {
         if (count <= 0) {
             log.error("Число фильмов для показа меньше или равно нулю");
             throw new NegativeCountException("Число фильмов для показа должно быть больше нуля");

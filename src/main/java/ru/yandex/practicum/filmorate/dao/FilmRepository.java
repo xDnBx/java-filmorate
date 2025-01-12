@@ -9,10 +9,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import ru.yandex.practicum.filmorate.dao.mappers.DirectorMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.FilmMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.GenreMapper;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
@@ -32,6 +34,20 @@ import java.util.Objects;
 public class FilmRepository implements FilmStorage {
     private static final String GET_ALL_QUERY = "SELECT f.id, f.name, f.description, f.release_date, f.duration," +
             " m.id AS mpa_id, m.name AS mpa_name FROM films AS f JOIN mpa AS m ON f.mpa_id = m.id";
+    private static final String GET_POPULAR_QUERY = "SELECT l.film_id, COUNT(l.film_id), f.id, f.name, f.description," +
+            " f.release_date, f.duration, m.id AS mpa_id, m.name AS mpa_name FROM likes AS l" +
+            " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id GROUP BY film_id" +
+            " ORDER BY COUNT(film_id) DESC LIMIT ?";
+
+    private static final String GET_DIRECTOR_FILMS_SORTED_BY_LIKES = "SELECT f.id, f.name, f.description, f.release_date," +
+            " f.duration, m.id AS mpa_id, m.name AS mpa_name, COUNT(l.user_id) as likes_count FROM films f" +
+            " JOIN mpa m ON m.id = f.mpa_id LEFT JOIN likes l ON l.film_id = f.id GROUP BY f.id, f.name, f.description," +
+            " f.release_date, f.duration, mpa_id, mpa_name ORDER BY likes_count ASC";
+
+    private static final String GET_DIRECTOR_FILMS_SORTED_BY_YEARS = "SELECT f.id, f.name, f.description, f.release_date," +
+            " f.duration, m.id AS mpa_id, m.name AS mpa_name, FROM films f JOIN mpa m ON m.id = f.mpa_id" +
+            " ORDER BY EXTRACT(YEAR FROM f.release_date) ASC";
+
     private static final String GET_COMMON_FILMS = "SELECT f.id, f.name, f.description, f.release_date, f.duration, " +
             "m.id AS mpa_id, m.name AS mpa_name, COUNT(l.user_id) AS likes_count " +
             "FROM films as f " +
@@ -53,6 +69,11 @@ public class FilmRepository implements FilmStorage {
     private static final String DELETE_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
     private static final String DELETE_GENRES_QUERY = "DELETE FROM films_genres WHERE film_id = ?";
 
+    private static final String ADD_DIRECTOR_TO_FILM_QUERY = "INSERT INTO films_directors (film_id, director_id) VALUES (?, ?)";
+    private static final String GET_FILM_DIRECTORS_QUERY = "SELECT d.id, d.name FROM directors d" +
+            " JOIN films_directors fd ON fd.director_id = d.id WHERE fd.film_id = ?";
+    private static final String REMOVE_DIRECTORS_FROM_FILM = "DELETE FROM films_directors WHERE film_id = ?";
+
     private final JdbcTemplate jdbc;
 
     @Override
@@ -60,6 +81,7 @@ public class FilmRepository implements FilmStorage {
         try {
             List<Film> films = jdbc.query(GET_ALL_QUERY, FilmMapper::mapToFilm);
             films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
+            films.forEach(film -> film.setDirectors(getFilmDirectors(film.getId())));
             return films;
         } catch (RuntimeException e) {
             log.error("Ошибка при получении списка фильмов");
@@ -84,6 +106,7 @@ public class FilmRepository implements FilmStorage {
             Long id = Objects.requireNonNull(keyHolder.getKey()).longValue();
             film.setId(id);
             addGenresToFilm(film);
+            addDirectorsToFilm(film);
             log.info("Фильм с id = {} успешно добавлен!", film.getId());
             return film;
         } catch (Exception e) {
@@ -98,6 +121,7 @@ public class FilmRepository implements FilmStorage {
             jdbc.update(UPDATE_QUERY, newFilm.getName(), newFilm.getDescription(), newFilm.getReleaseDate().toString(),
                     newFilm.getDuration(), newFilm.getMpa().getId(), newFilm.getId());
             addGenresToFilm(newFilm);
+            addDirectorsToFilm(newFilm);
             log.info("Обновление фильма с id = {} прошло успешно!", newFilm.getId());
             return getFilmById(newFilm.getId());
         } catch (Exception e) {
@@ -112,6 +136,7 @@ public class FilmRepository implements FilmStorage {
             return jdbc.queryForObject(FIND_ID_QUERY, ((resultSet, rowNum) -> {
                 Film film = FilmMapper.mapToFilm(resultSet, rowNum);
                 film.setGenres(getFilmGenres(id));
+                film.setDirectors(getFilmDirectors(id));
                 return film;
             }), id);
         } catch (EmptyResultDataAccessException e) {
@@ -176,10 +201,33 @@ public class FilmRepository implements FilmStorage {
         try {
             List<Film> films = jdbc.query(getPopularQuery, FilmMapper::mapToFilm, count);
             films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
+            films.forEach(film -> film.setDirectors(getFilmDirectors(film.getId())));
             return films;
         } catch (Exception e) {
             log.error("Ошибка при получении списка популярных фильмов");
             throw new InternalServerException("Ошибка при получении списка популярных фильмов");
+        }
+    }
+
+    @Override
+    public Collection<Film> getDirectorFilms(Integer directorId, String sortBy) {
+        try {
+            String query;
+            if (sortBy.equalsIgnoreCase("likes")) {
+                query = GET_DIRECTOR_FILMS_SORTED_BY_LIKES;
+            } else if (sortBy.equalsIgnoreCase("year")) {
+                query = GET_DIRECTOR_FILMS_SORTED_BY_YEARS;
+            } else {
+                throw new NotFoundException(String.format("Запрос для сортировки по %s не найден", sortBy));
+            }
+
+            List<Film> films = jdbc.query(query, FilmMapper::mapToFilm);
+            films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
+            films.forEach(film -> film.setDirectors(getFilmDirectors(film.getId())));
+            return films;
+        } catch (Exception ex) {
+            log.error(String.format("Ошибка при получении списка фильмов режиссёра с идентификатором %d", directorId), ex);
+            throw new InternalServerException("Ошибка при получении списка фильмов режиссёра");
         }
     }
 
@@ -213,6 +261,38 @@ public class FilmRepository implements FilmStorage {
         } catch (Exception e) {
             log.error("Ошибка при получении списка жанров");
             throw new InternalServerException("Ошибка при получении списка жанров");
+        }
+    }
+
+    private void addDirectorsToFilm(Film film) {
+        try {
+            Collection<Director> directors = film.getDirectors();
+            jdbc.update(REMOVE_DIRECTORS_FROM_FILM, film.getId());
+            jdbc.batchUpdate(ADD_DIRECTOR_TO_FILM_QUERY, new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
+                    Director director = (Director) directors.toArray()[i];
+                    preparedStatement.setLong(1, film.getId());
+                    preparedStatement.setInt(2, director.getId());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return directors.size();
+                }
+            });
+        } catch (Exception ex) {
+            log.error(String.format("Ошибка при добавлении режиссёров для фильма с идентификатором %d", film.getId()), ex);
+            throw new InternalServerException("Ошибка при добавлении режиссёров");
+        }
+    }
+
+    private Collection<Director> getFilmDirectors(Long id) {
+        try {
+            return new HashSet<>(Objects.requireNonNull(jdbc.query(GET_FILM_DIRECTORS_QUERY, DirectorMapper::mapToDirector, id)));
+        } catch (Exception ex) {
+            log.error(String.format("Ошибка при получении списка режиссёров для фильма с идентификатором %d", id), ex);
+            throw new InternalServerException("Ошибка при получении списка режиссёров");
         }
     }
 }

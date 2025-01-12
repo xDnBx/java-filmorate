@@ -32,10 +32,6 @@ import java.util.Objects;
 public class FilmRepository implements FilmStorage {
     private static final String GET_ALL_QUERY = "SELECT f.id, f.name, f.description, f.release_date, f.duration," +
             " m.id AS mpa_id, m.name AS mpa_name FROM films AS f JOIN mpa AS m ON f.mpa_id = m.id";
-    private static final String GET_POPULAR_QUERY = "SELECT l.film_id, COUNT(l.film_id), f.id, f.name, f.description," +
-            " f.release_date, f.duration, m.id AS mpa_id, m.name AS mpa_name FROM likes AS l" +
-            " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id GROUP BY film_id" +
-            " ORDER BY COUNT(film_id) DESC LIMIT ?";
     private static final String GET_COMMON_FILMS = "SELECT f.id, f.name, f.description, f.release_date, f.duration, " +
             "m.id AS mpa_id, m.name AS mpa_name, COUNT(l.user_id) AS likes_count " +
             "FROM films as f " +
@@ -159,9 +155,26 @@ public class FilmRepository implements FilmStorage {
     }
 
     @Override
-    public List<Film> getPopularFilms(Long count) {
+    public List<Film> getPopularFilms(Long count, Integer genreId, Integer year) {
+        String insert = "";
+        if (genreId != null && year == null) {
+            insert = "JOIN films_genres AS fg ON f.id = fg.film_id WHERE fg.genre_id = " + genreId;
+        }
+        if (genreId == null && year != null) {
+            insert = "WHERE YEAR(f.release_date) = " + year;
+        }
+        if (genreId != null && year != null) {
+            insert = "JOIN films_genres AS fg ON f.id = fg.film_id WHERE fg.genre_id = " + genreId +
+                    " AND YEAR(f.release_date) = " + year;
+        }
+
+        String getPopularQuery = "SELECT l.film_id, COUNT(l.film_id), f.id, f.name, f.description," +
+                " f.release_date, f.duration, m.id AS mpa_id, m.name AS mpa_name FROM likes AS l" +
+                " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id " + insert +
+                " GROUP BY l.film_id ORDER BY COUNT(l.film_id) DESC LIMIT ?";
+
         try {
-            List<Film> films = jdbc.query(GET_POPULAR_QUERY, FilmMapper::mapToFilm, count);
+            List<Film> films = jdbc.query(getPopularQuery, FilmMapper::mapToFilm, count);
             films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
             return films;
         } catch (Exception e) {

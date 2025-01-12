@@ -36,6 +36,14 @@ public class FilmRepository implements FilmStorage {
             " f.release_date, f.duration, m.id AS mpa_id, m.name AS mpa_name FROM likes AS l" +
             " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id GROUP BY film_id" +
             " ORDER BY COUNT(film_id) DESC LIMIT ?";
+    private static final String GET_COMMON_FILMS = "SELECT f.id, f.name, f.description, f.release_date, f.duration, " +
+            "m.id AS mpa_id, m.name AS mpa_name, COUNT(l.user_id) AS likes_count " +
+            "FROM films as f " +
+            "LEFT JOIN likes AS l ON f.id = l.film_id " +
+            "LEFT JOIN mpa AS m ON f.mpa_id = m.id " +
+            "WHERE l.user_id = ? AND f.id IN (SELECT l.film_id FROM likes WHERE user_id = ?)" +
+            "GROUP BY f.id " +
+            "ORDER BY likes_count DESC";
     private static final String INSERT_QUERY = "INSERT INTO films (name, description, release_date, duration, mpa_id)" +
             " VALUES (?, ?, ?, ?, ?)";
     private static final String UPDATE_QUERY = "UPDATE films SET name = ?, description = ?, release_date = ?," +
@@ -135,6 +143,18 @@ public class FilmRepository implements FilmStorage {
         } catch (Exception e) {
             log.error("Ошибка при удалении лайка пользователя");
             throw new InternalServerException("Ошибка при удалении лайка пользователя");
+        }
+    }
+
+    @Override
+    public List<Film> getCommonFilms(Long userId1, Long userId2) {
+        try {
+            List<Film> films = jdbc.query(GET_COMMON_FILMS, FilmMapper::mapToFilm, userId1, userId2);
+            films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
+            return films;
+        } catch (Exception e) {
+            log.error("Ошибка при получении списка общих фильмов пользователей: {}, {}", userId1, userId2);
+            throw new InternalServerException("Ошибка при получении списка общих фильмов");
         }
     }
 

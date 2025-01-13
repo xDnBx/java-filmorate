@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FriendsStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
@@ -69,4 +70,10 @@ public class UserService {
         userStorage.getUserById(otherId);
         return friendsStorage.getCommonFriends(id, otherId);
     }
+
+    public List<Film> getRecommendedFilms(Long id) {
+        return userStorage.getRecommendedFilms(id);
+    }
+
+    ;
 }

@@ -115,8 +115,7 @@ public class UserRepository implements UserStorage {
 
     @Override
     public List<Film> getRecommendedFilms(Long id) {
-        List<Film> films = jdbc.queryForStream(GET_RECOMMENDED_FILMS, FilmMapper::mapToFilm, id, id, id).collect(Collectors.toSet()).stream().toList();
-        System.out.println(films);
-        return films;
+        getUserById(id);
+        return jdbc.queryForStream(GET_RECOMMENDED_FILMS, FilmMapper::mapToFilm, id, id, id).collect(Collectors.toSet()).stream().toList();
     }
 }

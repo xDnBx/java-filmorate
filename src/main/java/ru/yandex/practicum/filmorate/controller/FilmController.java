@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -70,5 +71,12 @@ public class FilmController {
     public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") Long count) {
         log.info("Запрос на получение списка из {} популярных фильмов", count);
         return filmService.getPopularFilms(count);
+    }
+
+    @GetMapping("/search")
+    public List<Film> searchFilms(@NotNull(message = "query не может быть пустым") @RequestParam String query, @RequestParam(required = false) String by) {
+        log.info("query : " + query);
+        log.info("by : " + by);
+        return filmService.searchFilms(query, by);
     }
 }

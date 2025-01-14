@@ -11,6 +11,7 @@ import ru.yandex.practicum.filmorate.storage.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.MpaStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -83,5 +84,13 @@ public class FilmService {
     public Genre getGenreById(Integer id) {
         log.info("Получение жанра с id = {}", id);
         return genreStorage.getGenreById(id);
+    }
+
+    public List<Film> searchFilms(String query, String by) {
+        if (by == null) {
+            return filmStorage.findByNameFilm(query);
+        }
+        String[] titleDirector = by.split(",");
+        return new ArrayList<>();
     }
 }

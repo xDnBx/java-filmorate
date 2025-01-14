@@ -15,39 +15,55 @@ import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+
+import static ru.yandex.practicum.filmorate.dao.mappers.FilmMapper.mapToFilm;
 
 @Repository
 @Slf4j
 @RequiredArgsConstructor
 @Primary
 public class FilmRepository implements FilmStorage {
+
     private static final String GET_ALL_QUERY = "SELECT f.id, f.name, f.description, f.release_date, f.duration," +
             " m.id AS mpa_id, m.name AS mpa_name FROM films AS f JOIN mpa AS m ON f.mpa_id = m.id";
+
     private static final String GET_POPULAR_QUERY = "SELECT l.film_id, COUNT(l.film_id), f.id, f.name, f.description," +
             " f.release_date, f.duration, m.id AS mpa_id, m.name AS mpa_name FROM likes AS l" +
             " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id GROUP BY film_id" +
             " ORDER BY COUNT(film_id) DESC LIMIT ?";
+
     private static final String INSERT_QUERY = "INSERT INTO films (name, description, release_date, duration, mpa_id)" +
             " VALUES (?, ?, ?, ?, ?)";
+
     private static final String UPDATE_QUERY = "UPDATE films SET name = ?, description = ?, release_date = ?," +
             " duration = ?, mpa_id = ? WHERE id = ?";
+
     private static final String INSERT_GENRE_QUERY = "INSERT INTO films_genres (film_id, genre_id) VALUES (?, ?)";
     private static final String FIND_ID_QUERY = "SELECT f.id, f.name, f.description, f.release_date, f.duration," +
             " f.mpa_id, m.name AS mpa_name FROM films AS f JOIN mpa AS m ON f.mpa_id = m.id WHERE f.id = ?";
+
     private static final String FIND_GENRES_QUERY = "SELECT g.id, g.name FROM films_genres AS f" +
             " JOIN genres AS g ON f.genre_id = g.id WHERE f.film_id = ?";
+
     private static final String INSERT_LIKE_QUERY = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
+
     private static final String DELETE_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
+
     private static final String DELETE_GENRES_QUERY = "DELETE FROM films_genres WHERE film_id = ?";
+
 
     private final JdbcTemplate jdbc;
 
@@ -106,7 +122,7 @@ public class FilmRepository implements FilmStorage {
     public Film getFilmById(Long id) {
         try {
             return jdbc.queryForObject(FIND_ID_QUERY, ((resultSet, rowNum) -> {
-                Film film = FilmMapper.mapToFilm(resultSet, rowNum);
+                Film film = mapToFilm(resultSet, rowNum);
                 film.setGenres(getFilmGenres(id));
                 return film;
             }), id);
@@ -182,4 +198,43 @@ public class FilmRepository implements FilmStorage {
             throw new InternalServerException("Ошибка при получении списка жанров");
         }
     }
+
+
+    private static final String FIND_MOVIES_QUERY = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, f.MPA_ID " +
+            "FROM FILMS f " +
+            "WHERE f.NAME LIKE ";
+
+    @Override
+    public List<Film> findByNameFilm(String requestedMovieTitleToSearch) {
+        try {
+            String preparedQuery = FIND_MOVIES_QUERY + "'" + "%" + requestedMovieTitleToSearch + "%" + "'" + " " +
+                    "group by f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, f.MPA_ID " +
+                    "order by f.NAME ";
+
+            List<Film> films = convertToFilms(jdbc.queryForList(preparedQuery));
+            log.info("Количество найденных фильмов: {}", films.size());
+            return films;
+        } catch (Exception e) {
+            log.error("Ошибка при получении списка найденных фильмов: {}", e.getMessage());
+            throw new InternalServerException("Ошибка при получении списка найденных фильмов");
+        }
+    }
+
+    private List<Film> convertToFilms(List<Map<String, Object>> results) {
+        List<Film> films = new ArrayList<>();
+        for (Map<String, Object> row : results) {
+            Film film = Film.builder()
+                    .id(((Number) row.get("ID")).longValue())
+                    .name((String) row.get("NAME"))
+                    .description((String) row.get("DESCRIPTION"))
+                    .releaseDate(((Date) row.get("RELEASE_DATE")).toLocalDate())
+                    .duration((Integer) row.get("DURATION"))
+                    .mpa(new Mpa((Integer) row.get("MPA_ID"), ""))
+                    .build();
+            films.add(film);
+        }
+        return films;
+    }
+
+
 }

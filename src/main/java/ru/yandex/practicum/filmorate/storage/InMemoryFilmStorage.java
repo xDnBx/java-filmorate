@@ -89,6 +89,11 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .toList();
     }
 
+    @Override
+    public List<Film> findByNameFilm(String requestedMovieTitleToSearch) {
+        return List.of();
+    }
+
     private long generateNewId() {
         return id++;
     }

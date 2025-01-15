@@ -78,7 +78,12 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public List<Film> getPopularFilms(Long count) {
+    public List<Film> getCommonFilms(Long userId1, Long userId2) {
+        return List.of();
+    }
+
+    @Override
+    public List<Film> getPopularFilms(Long count, Integer genreId, Integer year) {
         if (count <= 0) {
             log.error("Число фильмов для показа меньше или равно нулю");
             throw new NegativeCountException("Число фильмов для показа должно быть больше нуля");
@@ -87,6 +92,11 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .sorted((film1, film2) -> (film2.getLikes().size()) - film1.getLikes().size())
                 .limit(count)
                 .toList();
+    }
+
+    @Override
+    public Collection<Film> getDirectorFilms(Integer directorId, String sortBy) {
+        throw new UnsupportedOperationException();
     }
 
     @Override

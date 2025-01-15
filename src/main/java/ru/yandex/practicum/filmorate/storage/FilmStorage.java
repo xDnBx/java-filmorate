@@ -22,4 +22,10 @@ public interface FilmStorage {
     List<Film> getPopularFilms(Long count);
 
     List<Film> findByNameFilm(String requestedMovieTitleToSearch);
+
+    Collection<Film> getDirectorFilms(Integer directorId, String sortBy);
+
+    List<Film> getPopularFilms(Long count, Integer genreId, Integer year);
+
+    List<Film> getCommonFilms(Long userId1, Long userId2);
 }

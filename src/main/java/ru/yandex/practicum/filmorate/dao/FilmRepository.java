@@ -172,14 +172,26 @@ public class FilmRepository implements FilmStorage {
                     " AND YEAR(f.release_date) = " + year;
         }
 
-        String getPopularQuery = "SELECT l.film_id, COUNT(l.film_id), f.id, f.name, f.description," +
-                " f.release_date, f.duration, m.id AS mpa_id, m.name AS mpa_name FROM likes AS l" +
-                " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id " + insert +
-                " GROUP BY l.film_id ORDER BY COUNT(l.film_id) DESC LIMIT ?";
+        String getPopularQuery = "SELECT f.id, f.name, f.description, f.release_date, f.duration, m.id AS mpa_id," +
+                " m.name AS mpa_name FROM films AS f" +
+                " JOIN likes AS l ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id " + insert +
+                " GROUP BY f.id ORDER BY COUNT(l.user_id) DESC LIMIT ?";
+
+        List<Film> allFilms = getAllFilms().stream().toList();
 
         try {
             List<Film> films = jdbc.query(getPopularQuery, FilmMapper::mapToFilm, count);
             films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
+            if (count > films.size()) {
+                for (Film film : allFilms) {
+                    if (!films.contains(film)) {
+                        films.add(film);
+                    }
+                    if (count == films.size()) {
+                        return films;
+                    }
+                }
+            }
             return films;
         } catch (Exception e) {
             log.error("Ошибка при получении списка популярных фильмов");

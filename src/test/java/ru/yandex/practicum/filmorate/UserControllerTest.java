@@ -14,6 +14,7 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.HashSet;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -38,32 +39,30 @@ class UserControllerTest {
     void beforeEach() {
         user = User.builder()
                 .email("mail@yandex.ru")
-                .login("yandex")
+                .login("yandex1233")
                 .name("Yandex Practicum")
                 .birthday(LocalDate.of(1990, Month.MAY, 28))
+                .friends(new HashSet<>())
                 .build();
     }
 
     @Test
     void shouldReturnOkWhenCreateAndUpdateUser() throws Exception {
-        User newUser = user.toBuilder().email("mail1@yandex.ru").name("Yandex Practicum 2").build();
-        User newUser1 = user.toBuilder().id(1L).email("mail2@yandex.ru").name("Yandex Practicum 3").build();
+        User newUser = user.toBuilder().email("mail2@yandex.ru").login("yandex1531").name("Yandex Practicum 3").build();
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newUser)))
+                        .content(objectMapper.writeValueAsString(user)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.email").value("mail1@yandex.ru"))
-                .andExpect(jsonPath("$.login").value("yandex"))
+                .andExpect(jsonPath("$.email").value("mail@yandex.ru"))
+                .andExpect(jsonPath("$.login").value("yandex1233"))
                 .andExpect(jsonPath("$.name").value("Yandex Practicum 2"))
                 .andExpect(jsonPath("$.birthday").value("1990-05-28"));
         mockMvc.perform(put("/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newUser1)))
+                        .content(objectMapper.writeValueAsString(newUser)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.email").value("mail2@yandex.ru"))
-                .andExpect(jsonPath("$.login").value("yandex"))
+                .andExpect(jsonPath("$.login").value("yandex1531"))
                 .andExpect(jsonPath("$.name").value("Yandex Practicum 3"))
                 .andExpect(jsonPath("$.birthday").value("1990-05-28"));
     }

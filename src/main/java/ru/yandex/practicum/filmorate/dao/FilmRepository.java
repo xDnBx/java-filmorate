@@ -23,6 +23,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -32,6 +33,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Primary
 public class FilmRepository implements FilmStorage {
+
+    // region Queries
+
     private static final String GET_ALL_QUERY = "SELECT f.id, f.name, f.description, f.release_date, f.duration," +
             " m.id AS mpa_id, m.name AS mpa_name FROM films AS f JOIN mpa AS m ON f.mpa_id = m.id";
     private static final String GET_POPULAR_QUERY = "SELECT l.film_id, COUNT(l.film_id), f.id, f.name, f.description," +
@@ -39,14 +43,55 @@ public class FilmRepository implements FilmStorage {
             " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id GROUP BY film_id" +
             " ORDER BY COUNT(film_id) DESC LIMIT ?";
 
-    private static final String GET_DIRECTOR_FILMS_SORTED_BY_LIKES = "SELECT f.id, f.name, f.description, f.release_date," +
-            " f.duration, m.id AS mpa_id, m.name AS mpa_name, COUNT(l.user_id) as likes_count FROM films f" +
-            " JOIN mpa m ON m.id = f.mpa_id LEFT JOIN likes l ON l.film_id = f.id GROUP BY f.id, f.name, f.description," +
-            " f.release_date, f.duration, mpa_id, mpa_name ORDER BY likes_count ASC";
+    private static final String GET_DIRECTOR_FILMS_SORTED_BY_LIKES =
+            """
+            SELECT
+                        f.id,
+                        f.name,
+                        f.description,
+                        f.release_date,
+                        f.duration,
+                        m.id AS mpa_id,
+                        m.name AS mpa_name,
+                        COUNT(l.user_id) as likes_count
+            FROM
+                        films f
+                   JOIN mpa m ON m.id = f.mpa_id
+                   JOIN films_directors fd ON fd.film_id = f.id
+              LEFT JOIN likes l ON l.film_id = f.id
+            WHERE
+                        fd.director_id = ?
+            GROUP BY
+                        f.id,
+                        f.name,
+                        f.description,
+                        f.release_date,
+                        f.duration,
+                        mpa_id,
+                        mpa_name
+            ORDER BY
+                        likes_count DESC
+            """;
 
-    private static final String GET_DIRECTOR_FILMS_SORTED_BY_YEARS = "SELECT f.id, f.name, f.description, f.release_date," +
-            " f.duration, m.id AS mpa_id, m.name AS mpa_name, FROM films f JOIN mpa m ON m.id = f.mpa_id" +
-            " ORDER BY EXTRACT(YEAR FROM f.release_date) ASC";
+    private static final String GET_DIRECTOR_FILMS_SORTED_BY_YEARS =
+            """
+            SELECT
+                    f.id,
+                    f.name,
+                    f.description,
+                    f.release_date,
+                    f.duration,
+                    m.id AS mpa_id,
+                    m.name AS mpa_name,
+            FROM
+                    films f
+               JOIN mpa m ON m.id = f.mpa_id
+               JOIN films_directors fd ON fd.film_id = f.id
+            WHERE
+                    fd.director_id = ?
+            ORDER BY
+                    EXTRACT(YEAR FROM f.release_date)
+            """;
 
     private static final String GET_COMMON_FILMS = "SELECT f.id, f.name, f.description, f.release_date, f.duration, " +
             "m.id AS mpa_id, m.name AS mpa_name, COUNT(l.user_id) AS likes_count " +
@@ -73,6 +118,8 @@ public class FilmRepository implements FilmStorage {
     private static final String GET_FILM_DIRECTORS_QUERY = "SELECT d.id, d.name FROM directors d" +
             " JOIN films_directors fd ON fd.director_id = d.id WHERE fd.film_id = ?";
     private static final String REMOVE_DIRECTORS_FROM_FILM = "DELETE FROM films_directors WHERE film_id = ?";
+
+    // endregion
 
     private final JdbcTemplate jdbc;
 
@@ -221,7 +268,7 @@ public class FilmRepository implements FilmStorage {
                 throw new NotFoundException(String.format("Запрос для сортировки по %s не найден", sortBy));
             }
 
-            List<Film> films = jdbc.query(query, FilmMapper::mapToFilm);
+            List<Film> films = jdbc.query(query, FilmMapper::mapToFilm, directorId);
             films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
             films.forEach(film -> film.setDirectors(getFilmDirectors(film.getId())));
             return films;

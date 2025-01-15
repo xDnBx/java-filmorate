@@ -69,4 +69,10 @@ public class UserService {
         userStorage.getUserById(otherId);
         return friendsStorage.getCommonFriends(id, otherId);
     }
+
+    public void deleteUser(Long userId) {
+        log.info("Удаление пользователя с id = {}", userId);
+        userStorage.getUserById(userId);
+        userStorage.deleteUser(userId);
+    }
 }

@@ -94,6 +94,10 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .toList();
     }
 
+    @Override
+    public void deleteFilm(Long filmId) {
+    }
+
     private long generateNewId() {
         return id++;
     }

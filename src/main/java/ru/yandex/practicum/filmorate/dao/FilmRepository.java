@@ -52,6 +52,10 @@ public class FilmRepository implements FilmStorage {
     private static final String INSERT_LIKE_QUERY = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
     private static final String DELETE_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
     private static final String DELETE_GENRES_QUERY = "DELETE FROM films_genres WHERE film_id = ?";
+    private static final String DELETE_FILM_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ?";
+    private static final String DELETE_REVIEWS_QUERY = "DELETE FROM reviews WHERE film_id = ?";
+    private static final String DELETE_FILMS_RATING_QUERY = "DELETE FROM films_rating WHERE film_id = ?";
+    private static final String DELETE_QUERY = "DELETE FROM films WHERE id = ?";
 
     private final JdbcTemplate jdbc;
 
@@ -180,6 +184,21 @@ public class FilmRepository implements FilmStorage {
         } catch (Exception e) {
             log.error("Ошибка при получении списка популярных фильмов");
             throw new InternalServerException("Ошибка при получении списка популярных фильмов");
+        }
+    }
+
+    @Override
+    public void deleteFilm(Long filmId) {
+        try {
+            jdbc.update(DELETE_GENRES_QUERY, filmId);
+            jdbc.update(DELETE_FILM_LIKE_QUERY, filmId);
+            jdbc.update(DELETE_REVIEWS_QUERY, filmId);
+            jdbc.update(DELETE_FILMS_RATING_QUERY, filmId);
+            jdbc.update(DELETE_QUERY, filmId);
+            log.info("Фильм с id = {} удален", filmId);
+        } catch (Exception e) {
+            log.error("Ошибка при удалении фильма");
+            throw new InternalServerException("Ошибка при удалении фильма");
         }
     }
 

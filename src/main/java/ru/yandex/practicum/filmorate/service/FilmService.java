@@ -89,4 +89,10 @@ public class FilmService {
         log.info("Получение жанра с id = {}", id);
         return genreStorage.getGenreById(id);
     }
+
+    public void deleteFilm(Long filmId) {
+        log.info("Удаление фильма с id = {}", filmId);
+        filmStorage.getFilmById(filmId);
+        filmStorage.deleteFilm(filmId);
+    }
 }

@@ -70,4 +70,11 @@ public class FilmController {
         log.info("Запрос на получение списка из {} популярных фильмов", count);
         return filmService.getPopularFilms(count, genreId, year);
     }
+
+    @DeleteMapping("/{filmId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteFilm(@PathVariable Long filmId) {
+        log.info("Запрос на удаление фильма с id = {}", filmId);
+        filmService.deleteFilm(filmId);
+    }
 }

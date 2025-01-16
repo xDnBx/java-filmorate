@@ -9,6 +9,8 @@ import java.lang.annotation.RetentionPolicy;
 @Constraint(validatedBy = ReleaseDateValidator.class)
 public @interface ReleaseDate {
     String message() default "Дата релиза не может быть раньше 28.12.1895";
+
     Class<?>[] groups() default {};
+
     Class<?>[] payload() default {};
 }

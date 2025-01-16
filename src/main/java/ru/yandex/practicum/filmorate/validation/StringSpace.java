@@ -9,6 +9,8 @@ import java.lang.annotation.RetentionPolicy;
 @Constraint(validatedBy = StringSpaceValidator.class)
 public @interface StringSpace {
     String message() default "Строка не может быть пустой или содержать пробелы";
+
     Class<?>[] groups() default {};
+
     Class<?>[] payload() default {};
 }

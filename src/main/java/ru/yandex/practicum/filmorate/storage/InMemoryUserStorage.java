@@ -2,18 +2,11 @@ package ru.yandex.practicum.filmorate.storage;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exception.AlreadyFriendsException;
-import ru.yandex.practicum.filmorate.exception.DuplicatedDataException;
-import ru.yandex.practicum.filmorate.exception.FriendForHimselfException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.*;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -72,6 +65,11 @@ public class InMemoryUserStorage implements UserStorage, FriendsStorage {
     public User getUserById(Long id) {
         checkUser(id);
         return users.get(id);
+    }
+
+    @Override
+    public List<Film> getRecommendedFilms(Long id) {
+        return List.of();
     }
 
     @Override

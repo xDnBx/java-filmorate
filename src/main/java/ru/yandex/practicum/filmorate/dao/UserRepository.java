@@ -30,6 +30,11 @@ public class UserRepository implements UserStorage {
     private static final String UPDATE_QUERY = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ?" +
             " WHERE id = ?";
     private static final String FIND_BY_ID_QUERY = "SELECT * FROM users WHERE id = ?";
+    private static final String DELETE_FRIENDS_QUERY = "DELETE FROM friends WHERE user_id = ? OR friend_id = ?";
+    private static final String DELETE_LIKE_QUERY = "DELETE FROM likes WHERE user_id = ?";
+    private static final String DELETE_REVIEW_QUERY = "DELETE FROM reviews WHERE user_id = ?";
+    private static final String DELETE_REVIEW_LIKE_QUERY = "DELETE FROM reviews_likes WHERE user_id = ?";
+    private static final String DELETE_QUERY = "DELETE FROM users WHERE id = ?";
 
     private final JdbcTemplate jdbc;
 
@@ -87,6 +92,21 @@ public class UserRepository implements UserStorage {
         } catch (EmptyResultDataAccessException e) {
             log.error("Ошибка при поиске пользователя");
             throw new NotFoundException("Пользователь с данным id не найден");
+        }
+    }
+
+    @Override
+    public void deleteUser(Long userId) {
+        try {
+            jdbc.update(DELETE_FRIENDS_QUERY, userId, userId);
+            jdbc.update(DELETE_LIKE_QUERY, userId);
+            jdbc.update(DELETE_REVIEW_QUERY, userId);
+            jdbc.update(DELETE_REVIEW_LIKE_QUERY, userId);
+            jdbc.update(DELETE_QUERY, userId);
+            log.info("Удаление пользователя с id = {} прошло успешно!", userId);
+        } catch (Exception e) {
+            log.error("Ошибка при удалении пользователя");
+            throw new InternalServerException("Ошибка при удалении пользователя");
         }
     }
 }

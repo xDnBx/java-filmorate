@@ -75,4 +75,11 @@ public class UserController {
         log.info("Запрос на получение событий пользователя с id = {}", id);
         return userService.getEvents(id);
     }
+
+    @DeleteMapping("/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(@PathVariable Long userId) {
+        log.info("Запрос на удаление фильма с id = {}", userId);
+        userService.deleteUser(userId);
+    }
 }

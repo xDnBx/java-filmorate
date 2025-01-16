@@ -77,6 +77,12 @@ public class UserService {
         return friendsStorage.getCommonFriends(id, otherId);
     }
 
+    public void deleteUser(Long userId) {
+        log.info("Удаление пользователя с id = {}", userId);
+        userStorage.getUserById(userId);
+        userStorage.deleteUser(userId);
+    }
+
     public List<ResponseEventDTO> getEvents(Integer id) {
         List<Event> eventList = eventRepository.findAllByUserId(id);
         return EventMapper.mapToResponseEventDTOList(eventList);

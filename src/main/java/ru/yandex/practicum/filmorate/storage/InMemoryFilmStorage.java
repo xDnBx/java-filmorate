@@ -99,6 +99,10 @@ public class InMemoryFilmStorage implements FilmStorage {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public void deleteFilm(Long filmId) {
+    }
+
     private long generateNewId() {
         return id++;
     }

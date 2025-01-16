@@ -3,6 +3,10 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dao.EventRepository;
+import ru.yandex.practicum.filmorate.dao.mappers.EventMapper;
+import ru.yandex.practicum.filmorate.dto.review.event.ResponseEventDTO;
+import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FriendsStorage;
@@ -17,6 +21,7 @@ import java.util.List;
 public class UserService {
     private final UserStorage userStorage;
     private final FriendsStorage friendsStorage;
+    private final EventRepository eventRepository;
 
     public Collection<User> getAllUsers() {
         log.info("Получение списка всех пользователей");
@@ -49,6 +54,7 @@ public class UserService {
         userStorage.getUserById(id);
         userStorage.getUserById(friendId);
         friendsStorage.addFriend(id, friendId);
+        eventRepository.insert(id.intValue(), Event.EventType.FRIEND, Event.Operation.ADD, friendId.intValue());
     }
 
     public void deleteFriend(Long id, Long friendId) {
@@ -56,6 +62,7 @@ public class UserService {
         userStorage.getUserById(id);
         userStorage.getUserById(friendId);
         friendsStorage.deleteFriend(id, friendId);
+        eventRepository.insert(id.intValue(), Event.EventType.FRIEND, Event.Operation.REMOVE, friendId.intValue());
     }
 
     public List<User> getFriends(Long id) {
@@ -69,6 +76,17 @@ public class UserService {
         userStorage.getUserById(id);
         userStorage.getUserById(otherId);
         return friendsStorage.getCommonFriends(id, otherId);
+    }
+
+    public void deleteUser(Long userId) {
+        log.info("Удаление пользователя с id = {}", userId);
+        userStorage.getUserById(userId);
+        userStorage.deleteUser(userId);
+    }
+
+    public List<ResponseEventDTO> getEvents(Integer id) {
+        List<Event> eventList = eventRepository.findAllByUserId(id);
+        return EventMapper.mapToResponseEventDTOList(eventList);
     }
 
     public List<Film> getRecommendedFilms(Long id) {

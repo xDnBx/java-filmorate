@@ -94,6 +94,15 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .toList();
     }
 
+    @Override
+    public Collection<Film> getDirectorFilms(Integer directorId, String sortBy) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void deleteFilm(Long filmId) {
+    }
+
     private long generateNewId() {
         return id++;
     }

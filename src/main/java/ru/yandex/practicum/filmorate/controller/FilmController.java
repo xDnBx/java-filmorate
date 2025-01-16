@@ -70,4 +70,17 @@ public class FilmController {
         log.info("Запрос на получение списка из {} популярных фильмов", count);
         return filmService.getPopularFilms(count, genreId, year);
     }
+
+    @GetMapping("/director/{directorId}")
+    public Collection<Film> getDirectorFilms(@PathVariable Integer directorId, @RequestParam String sortBy) {
+        log.info("Запрос на получение фильмов режиссёра с идентификатором {}. Сортировка по полю {}", directorId, sortBy);
+        return filmService.getDirectorFilms(directorId, sortBy);
+    }
+
+    @DeleteMapping("/{filmId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteFilm(@PathVariable Long filmId) {
+        log.info("Запрос на удаление фильма с id = {}", filmId);
+        filmService.deleteFilm(filmId);
+    }
 }

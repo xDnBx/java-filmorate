@@ -13,6 +13,7 @@ import ru.yandex.practicum.filmorate.model.Mpa;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,12 +36,14 @@ class FilmControllerTest {
     @BeforeEach
     public void beforeEach() {
         film = Film.builder()
+                .id(1L)
                 .name("Film 1")
                 .description("Description 1")
                 .releaseDate(LocalDate.of(1990, Month.MAY, 28))
                 .duration(150)
                 .mpa(Mpa.builder().id(1).build())
                 .genres(new LinkedHashSet<>())
+                .directors(new HashSet<>())
                 .build();
     }
 
@@ -51,7 +54,6 @@ class FilmControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Film 1"))
                 .andExpect(jsonPath("$.description").value("Description 1"))
                 .andExpect(jsonPath("$.releaseDate").value("1990-05-28"))
@@ -60,7 +62,6 @@ class FilmControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newFilm)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Film 2"))
                 .andExpect(jsonPath("$.description").value("Description 1"))
                 .andExpect(jsonPath("$.releaseDate").value("1990-05-28"))

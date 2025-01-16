@@ -26,6 +26,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final FilmRatingRepository filmRatingRepository;
     private final ReviewLikeRepository reviewLikeRepository;
+    private final EventRepository eventRepository;
 
     public ResponseReviewDTO createReview(CreateReviewDTO createReviewDTO) {
         User user = userRepository.getUserById((long) createReviewDTO.getUserId());
@@ -44,6 +45,7 @@ public class ReviewService {
             return new NotFoundException(String.format("Отзыв с id=%s не найден.", reviewId));
         });
 
+        eventRepository.insert(review.getUserId(), Event.EventType.REVIEW, Event.Operation.ADD, review.getId());
         return ReviewMapper.mapToResponseReviewDTO(review);
     }
 
@@ -80,6 +82,7 @@ public class ReviewService {
         }
 
         reviewRepository.update(review);
+        eventRepository.insert(review.getUserId(), Event.EventType.REVIEW, Event.Operation.UPDATE, review.getId());
         return ReviewMapper.mapToResponseReviewDTO(review);
     }
 
@@ -93,6 +96,7 @@ public class ReviewService {
         boolean isReviewDeleted = reviewRepository.delete(id);
         boolean isFilmRatingDeleted = filmRatingRepository.delete(review.getFilmId());
         if (isReviewDeleted && isFilmRatingDeleted) {
+            eventRepository.insert(review.getUserId(), Event.EventType.REVIEW, Event.Operation.REMOVE, review.getId());
             return ReviewMapper.mapToResponseReviewDTO(review);
         } else {
             log.error("Произошла ошибка при удалении отзыва.");

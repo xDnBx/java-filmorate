@@ -16,4 +16,6 @@ public interface UserStorage {
     User getUserById(Long id);
 
     List<Film> getRecommendedFilms(Long id);
+
+    void deleteUser(Long userId);
 }

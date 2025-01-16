@@ -129,6 +129,11 @@ public class InMemoryUserStorage implements UserStorage, FriendsStorage {
                 .toList();
     }
 
+    @Override
+    public void deleteUser(Long userId){
+
+    }
+
     private long generateNewId() {
         return id++;
     }

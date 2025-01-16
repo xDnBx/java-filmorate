@@ -8,6 +8,7 @@ import lombok.*;
 import ru.yandex.practicum.filmorate.validation.ReleaseDate;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -35,7 +36,10 @@ public class Film {
 
     @NotNull
     private Mpa mpa;
+
     private LinkedHashSet<Genre> genres = new LinkedHashSet<>();
+
+    private Collection<Director> directors = new HashSet<>();
 
     private Set<Long> likes = new HashSet<>();
 }

@@ -55,7 +55,7 @@ class UserControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email").value("mail@yandex.ru"))
                 .andExpect(jsonPath("$.login").value("yandex1233"))
-                .andExpect(jsonPath("$.name").value("Yandex Practicum 2"))
+                .andExpect(jsonPath("$.name").value("Yandex Practicum"))
                 .andExpect(jsonPath("$.birthday").value("1990-05-28"));
         mockMvc.perform(put("/users")
                         .contentType(MediaType.APPLICATION_JSON)

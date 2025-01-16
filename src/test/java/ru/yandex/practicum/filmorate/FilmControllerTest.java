@@ -13,6 +13,7 @@ import ru.yandex.practicum.filmorate.model.Mpa;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -42,6 +43,7 @@ class FilmControllerTest {
                 .duration(150)
                 .mpa(Mpa.builder().id(1).build())
                 .genres(new LinkedHashSet<>())
+                .directors(new HashSet<>())
                 .build();
     }
 

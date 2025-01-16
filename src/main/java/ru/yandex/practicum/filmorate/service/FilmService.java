@@ -77,6 +77,11 @@ public class FilmService {
         return filmStorage.getPopularFilms(count, genreId, year);
     }
 
+    public Collection<Film> getDirectorFilms(Integer directorId, String sortBy) {
+        log.info("Получение фильмов режиссёра с идентификатором {}. Сортировка по полю {}", directorId, sortBy);
+        return filmStorage.getDirectorFilms(directorId, sortBy);
+    }
+
     public Collection<Mpa> getAllMpa() {
         log.info("Получение списка всех рейтингов");
         return mpaStorage.getAllMpa();

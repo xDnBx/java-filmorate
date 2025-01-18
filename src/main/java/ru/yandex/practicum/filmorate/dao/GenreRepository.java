@@ -14,13 +14,19 @@ import ru.yandex.practicum.filmorate.storage.GenreStorage;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 
 @Repository
 @Slf4j
 @RequiredArgsConstructor
 public class GenreRepository implements GenreStorage {
+
     private static final String GET_ALL_QUERY = "SELECT * FROM genres";
+
     private static final String FIND_BY_ID_QUERY = "SELECT * FROM genres WHERE id = ?";
+
+    private static final String FIND_BY_ID_FILM_QUERY = "SELECT distinct g.id, g.NAME FROM genres g , FILMS_GENRES fg WHERE fg.FILM_ID = ? and g.id=fg.GENRE_ID";
+
     private final JdbcTemplate jdbc;
 
     @Override
@@ -55,6 +61,19 @@ public class GenreRepository implements GenreStorage {
         } catch (EmptyResultDataAccessException e) {
             log.error("Ошибка при поиске жанра");
             throw new ValidationException("Жанр с данным id не найден");
+        }
+    }
+
+    @Override
+    public LinkedHashSet<Genre> getGenreByFilmId(Long filmId) {
+        try {
+            List<Genre> list = jdbc.query(FIND_BY_ID_FILM_QUERY, GenreMapper::mapToGenre, filmId);
+            LinkedHashSet<Genre> genres = new LinkedHashSet<>(list);
+            log.info("Получено {} жанров для фильма с id = {}", genres.size(), filmId);
+            return genres;
+        } catch (Exception e) {
+            log.error("Ошибка при получении списка жанров");
+            return new LinkedHashSet<>();
         }
     }
 }

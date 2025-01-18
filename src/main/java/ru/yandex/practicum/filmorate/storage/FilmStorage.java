@@ -19,8 +19,6 @@ public interface FilmStorage {
 
     void deleteLike(Long id, Long userId);
 
-    List<Film> getPopularFilms(Long count);
-
     List<Film> findByNameFilm(String requestedMovieTitleToSearch);
 
     Collection<Film> getDirectorFilms(Integer directorId, String sortBy);
@@ -28,4 +26,7 @@ public interface FilmStorage {
     List<Film> getPopularFilms(Long count, Integer genreId, Integer year);
 
     List<Film> getCommonFilms(Long userId1, Long userId2);
+
+    List<Film> findByNameFilmAndTitleDirector(String requestedMovieTitleToSearch, String title, String director);
+
 }

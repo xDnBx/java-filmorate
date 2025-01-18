@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static ru.yandex.practicum.filmorate.dao.mappers.FilmMapper.mapToFilm;
-
 @Repository
 @Slf4j
 @RequiredArgsConstructor
@@ -44,60 +42,56 @@ public class FilmRepository implements FilmStorage {
 
     private static final String GET_ALL_QUERY = "SELECT f.id, f.name, f.description, f.release_date, f.duration," +
             " m.id AS mpa_id, m.name AS mpa_name FROM films AS f JOIN mpa AS m ON f.mpa_id = m.id";
-    private static final String GET_POPULAR_QUERY = "SELECT l.film_id, COUNT(l.film_id), f.id, f.name, f.description," +
-            " f.release_date, f.duration, m.id AS mpa_id, m.name AS mpa_name FROM likes AS l" +
-            " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id GROUP BY film_id" +
-            " ORDER BY COUNT(film_id) DESC LIMIT ?";
 
     private static final String GET_DIRECTOR_FILMS_SORTED_BY_LIKES =
             """
-            SELECT
-                        f.id,
-                        f.name,
-                        f.description,
-                        f.release_date,
-                        f.duration,
-                        m.id AS mpa_id,
-                        m.name AS mpa_name,
-                        COUNT(l.user_id) as likes_count
-            FROM
-                        films f
-                   JOIN mpa m ON m.id = f.mpa_id
-                   JOIN films_directors fd ON fd.film_id = f.id
-              LEFT JOIN likes l ON l.film_id = f.id
-            WHERE
-                        fd.director_id = ?
-            GROUP BY
-                        f.id,
-                        f.name,
-                        f.description,
-                        f.release_date,
-                        f.duration,
-                        mpa_id,
-                        mpa_name
-            ORDER BY
-                        likes_count DESC
-            """;
+                    SELECT
+                                f.id,
+                                f.name,
+                                f.description,
+                                f.release_date,
+                                f.duration,
+                                m.id AS mpa_id,
+                                m.name AS mpa_name,
+                                COUNT(l.user_id) as likes_count
+                    FROM
+                                films f
+                           JOIN mpa m ON m.id = f.mpa_id
+                           JOIN films_directors fd ON fd.film_id = f.id
+                      LEFT JOIN likes l ON l.film_id = f.id
+                    WHERE
+                                fd.director_id = ?
+                    GROUP BY
+                                f.id,
+                                f.name,
+                                f.description,
+                                f.release_date,
+                                f.duration,
+                                mpa_id,
+                                mpa_name
+                    ORDER BY
+                                likes_count DESC
+                    """;
 
     private static final String GET_DIRECTOR_FILMS_SORTED_BY_YEARS =
             """
-            SELECT
-                    f.id,
-                    f.name,
-                    f.description,
-                    f.release_date,
-                    f.duration,
-                    m.id AS mpa_id,
-                    m.name AS mpa_name,
-            FROM
-                    films f
-               JOIN mpa m ON m.id = f.mpa_id
-               JOIN films_directors fd ON fd.film_id = f.id
-            WHERE
-                    fd.director_id = ?
-            ORDER BY
-                    EXTRACT(YEAR FROM f.release_date)
-            """;
+                    SELECT
+                            f.id,
+                            f.name,
+                            f.description,
+                            f.release_date,
+                            f.duration,
+                            m.id AS mpa_id,
+                            m.name AS mpa_name,
+                    FROM
+                            films f
+                       JOIN mpa m ON m.id = f.mpa_id
+                       JOIN films_directors fd ON fd.film_id = f.id
+                    WHERE
+                            fd.director_id = ?
+                    ORDER BY
+                            EXTRACT(YEAR FROM f.release_date)
+                    """;
 
     private static final String GET_COMMON_FILMS = "SELECT f.id, f.name, f.description, f.release_date, f.duration, " +
             "m.id AS mpa_id, m.name AS mpa_name, COUNT(l.user_id) AS likes_count " +
@@ -107,27 +101,51 @@ public class FilmRepository implements FilmStorage {
             "WHERE l.user_id = ? AND f.id IN (SELECT l.film_id FROM likes WHERE user_id = ?)" +
             "GROUP BY f.id " +
             "ORDER BY likes_count DESC";
+
     private static final String INSERT_QUERY = "INSERT INTO films (name, description, release_date, duration, mpa_id)" +
             " VALUES (?, ?, ?, ?, ?)";
+
     private static final String UPDATE_QUERY = "UPDATE films SET name = ?, description = ?, release_date = ?," +
             " duration = ?, mpa_id = ? WHERE id = ?";
+
     private static final String INSERT_GENRE_QUERY = "INSERT INTO films_genres (film_id, genre_id) VALUES (?, ?)";
+
     private static final String FIND_ID_QUERY = "SELECT f.id, f.name, f.description, f.release_date, f.duration," +
             " f.mpa_id, m.name AS mpa_name FROM films AS f JOIN mpa AS m ON f.mpa_id = m.id WHERE f.id = ?";
+
     private static final String FIND_GENRES_QUERY = "SELECT g.id, g.name FROM films_genres AS f" +
             " JOIN genres AS g ON f.genre_id = g.id WHERE f.film_id = ?";
+
     private static final String INSERT_LIKE_QUERY = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
+
     private static final String DELETE_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
+
     private static final String DELETE_GENRES_QUERY = "DELETE FROM films_genres WHERE film_id = ?";
 
     private static final String ADD_DIRECTOR_TO_FILM_QUERY = "INSERT INTO films_directors (film_id, director_id) VALUES (?, ?)";
+
     private static final String GET_FILM_DIRECTORS_QUERY = "SELECT d.id, d.name FROM directors d" +
             " JOIN films_directors fd ON fd.director_id = d.id WHERE fd.film_id = ?";
+
     private static final String REMOVE_DIRECTORS_FROM_FILM = "DELETE FROM films_directors WHERE film_id = ?";
 
-    private static final String FIND_MOVIES_QUERY = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, f.MPA_ID " +
+    private static final String FIND_MOVIES_QUERY_BY_TITLE = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, f.MPA_ID " +
             "FROM FILMS f " +
-            "WHERE f.NAME LIKE ";
+            "WHERE f.NAME ILIKE ";
+
+    private static final String FIND_MOVIES_QUERY_BY_DIRECTOR = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, f.MPA_ID " +
+            "FROM FILMS f, " +
+            "     FILMS_DIRECTORS fd, " +
+            "     DIRECTORS d " +
+            "WHERE D.NAME ILIKE ";
+
+    private static final String FIND_MOVIES_QUERY_BY_DIRECTOR_AND_TITLE = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, f.MPA_ID " +
+            "FROM FILMS f, " +
+            "     FILMS_DIRECTORS fd, " +
+            "     DIRECTORS d " +
+            "WHERE F.ID = FD.FILM_ID " +
+            "  AND FD.DIRECTOR_ID = D.ID " +
+            "  AND D.NAME ILIKE ";
     // endregion
 
     private final JdbcTemplate jdbc;
@@ -355,9 +373,19 @@ public class FilmRepository implements FilmStorage {
     @Override
     public List<Film> findByNameFilm(String requestedMovieTitleToSearch) {
         try {
-            String preparedQuery = FIND_MOVIES_QUERY + "'" + "%" + requestedMovieTitleToSearch + "%" + "'" + " " +
-                    "group by f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, f.MPA_ID " +
-                    "order by f.NAME ";
+            List<Film> films = convertToFilms(jdbc.queryForList(prepareSqlForFindMoviesByDirectorAndTitle(requestedMovieTitleToSearch, null, null)));
+            log.info("Количество найденных фильмов: {}", films.size());
+            return films;
+        } catch (Exception e) {
+            log.error("Ошибка при получении списка найденных фильмов: {}", e.getMessage());
+            throw new InternalServerException("Ошибка при получении списка найденных фильмов");
+        }
+    }
+
+    @Override
+    public List<Film> findByNameFilmAndTitleDirector(String requestedMovieTitleToSearch, String title, String director) {
+        try {
+            String preparedQuery = prepareSqlForFindMoviesByDirectorAndTitle(requestedMovieTitleToSearch, title, director);
 
             List<Film> films = convertToFilms(jdbc.queryForList(preparedQuery));
             log.info("Количество найденных фильмов: {}", films.size());
@@ -367,6 +395,31 @@ public class FilmRepository implements FilmStorage {
             throw new InternalServerException("Ошибка при получении списка найденных фильмов");
         }
     }
+
+    private static String prepareSqlForFindMoviesByDirectorAndTitle(String requestedMovieTitleToSearch, String director, String title) {
+        requestedMovieTitleToSearch = requestedMovieTitleToSearch.toUpperCase();
+        String preparedQuery = null;
+
+        if (title != null && director == null) {
+            preparedQuery = FIND_MOVIES_QUERY_BY_TITLE + "'" + "%" + requestedMovieTitleToSearch + "%" + "'" + " ";
+        }
+        if (director != null && title == null) {
+            preparedQuery = FIND_MOVIES_QUERY_BY_DIRECTOR + "'" + "%" + requestedMovieTitleToSearch + "%" + "'" +
+                    "  AND FD.DIRECTOR_ID=D.ID " +
+                    "  AND f.ID=FD.FILM_ID";
+        }
+        if (director != null && title != null) {
+            preparedQuery = FIND_MOVIES_QUERY_BY_DIRECTOR_AND_TITLE + "'" + "%" + requestedMovieTitleToSearch + "%" + "'" +
+                    "OR f.NAME ILIKE " + "'" + "%" + requestedMovieTitleToSearch + "%" + "'";
+        }
+        if (preparedQuery == null) {
+            return "";
+        }
+        preparedQuery += " group by f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, f.MPA_ID " +
+                "order by f.NAME ";
+        return preparedQuery;
+    }
+
 
     private List<Film> convertToFilms(List<Map<String, Object>> results) {
         List<Film> films = new ArrayList<>();

@@ -78,10 +78,15 @@ public class FilmController {
         return filmService.getDirectorFilms(directorId, sortBy);
     }
 
+    @DeleteMapping("/{filmId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteFilm(@PathVariable Long filmId) {
+        log.info("Запрос на удаление фильма с id = {}", filmId);
+        filmService.deleteFilm(filmId);
+    }
+
     @GetMapping("/search")
     public List<Film> searchFilms(@NotNull(message = "query не может быть пустым") @RequestParam String query, @RequestParam(required = false) String by) {
-        log.info("query : " + query);
-        log.info("by : " + by);
         return filmService.searchFilms(query, by);
     }
 }

@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.dto.review.event.ResponseEventDTO;
+import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
@@ -70,9 +72,22 @@ public class UserController {
         return userService.getCommonFriends(id, otherId);
     }
 
+    @GetMapping("/{id}/recommendations")
+    public List<Film> getRecommendedFilms(@PathVariable Long id) {
+        log.info("Запрос на получение списка рекомендуемых фильмов для пользователя с id = {}", id);
+        return userService.getRecommendedFilms(id);
+    }
+
     @GetMapping("/{id}/feed")
     public List<ResponseEventDTO> getEvents(@PathVariable Integer id) {
         log.info("Запрос на получение событий пользователя с id = {}", id);
         return userService.getEvents(id);
+    }
+
+    @DeleteMapping("/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(@PathVariable Long userId) {
+        log.info("Запрос на удаление фильма с id = {}", userId);
+        userService.deleteUser(userId);
     }
 }

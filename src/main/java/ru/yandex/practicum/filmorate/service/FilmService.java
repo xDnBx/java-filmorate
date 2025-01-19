@@ -108,6 +108,12 @@ public class FilmService {
         return genreStorage.getGenreById(id);
     }
 
+    public void deleteFilm(Long filmId) {
+        log.info("Удаление фильма с id = {}", filmId);
+        filmStorage.getFilmById(filmId);
+        filmStorage.deleteFilm(filmId);
+    }
+
     public List<Film> searchFilms(String query, String by) {
         if (by == null) {
             return filmStorage.findByNameFilm(query);

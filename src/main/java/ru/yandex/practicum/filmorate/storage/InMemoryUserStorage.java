@@ -2,18 +2,11 @@ package ru.yandex.practicum.filmorate.storage;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exception.AlreadyFriendsException;
-import ru.yandex.practicum.filmorate.exception.DuplicatedDataException;
-import ru.yandex.practicum.filmorate.exception.FriendForHimselfException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.*;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -75,6 +68,11 @@ public class InMemoryUserStorage implements UserStorage, FriendsStorage {
     }
 
     @Override
+    public List<Film> getRecommendedFilms(Long id) {
+        return List.of();
+    }
+
+    @Override
     public void addFriend(Long id, Long friendId) {
         checkUsersFriends(id, friendId);
 
@@ -129,6 +127,11 @@ public class InMemoryUserStorage implements UserStorage, FriendsStorage {
                 .filter(friend::contains)
                 .map(this::getUserById)
                 .toList();
+    }
+
+    @Override
+    public void deleteUser(Long userId){
+
     }
 
     private long generateNewId() {

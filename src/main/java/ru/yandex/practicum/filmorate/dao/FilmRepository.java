@@ -121,6 +121,10 @@ public class FilmRepository implements FilmStorage {
     private static final String DELETE_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
 
     private static final String DELETE_GENRES_QUERY = "DELETE FROM films_genres WHERE film_id = ?";
+    private static final String DELETE_FILM_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ?";
+    private static final String DELETE_REVIEWS_QUERY = "DELETE FROM reviews WHERE film_id = ?";
+    private static final String DELETE_FILMS_RATING_QUERY = "DELETE FROM films_rating WHERE film_id = ?";
+    private static final String DELETE_QUERY = "DELETE FROM films WHERE id = ?";
 
     private static final String ADD_DIRECTOR_TO_FILM_QUERY = "INSERT INTO films_directors (film_id, director_id) VALUES (?, ?)";
 
@@ -267,14 +271,26 @@ public class FilmRepository implements FilmStorage {
                     " AND YEAR(f.release_date) = " + year;
         }
 
-        String getPopularQuery = "SELECT l.film_id, COUNT(l.film_id), f.id, f.name, f.description," +
-                " f.release_date, f.duration, m.id AS mpa_id, m.name AS mpa_name FROM likes AS l" +
-                " JOIN films AS f ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id " + insert +
-                " GROUP BY l.film_id ORDER BY COUNT(l.film_id) DESC LIMIT ?";
+        String getPopularQuery = "SELECT f.id, f.name, f.description, f.release_date, f.duration, m.id AS mpa_id," +
+                " m.name AS mpa_name FROM films AS f" +
+                " JOIN likes AS l ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id " + insert +
+                " GROUP BY f.id ORDER BY COUNT(l.user_id) DESC LIMIT ?";
+
+        List<Film> allFilms = getAllFilms().stream().toList();
 
         try {
             List<Film> films = jdbc.query(getPopularQuery, FilmMapper::mapToFilm, count);
             films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
+            if (count > films.size()) {
+                for (Film film : allFilms) {
+                    if (!films.contains(film)) {
+                        films.add(film);
+                    }
+                    if (count == films.size()) {
+                        return films;
+                    }
+                }
+            }
             films.forEach(film -> film.setDirectors(getFilmDirectors(film.getId())));
             return films;
         } catch (Exception e) {
@@ -302,6 +318,21 @@ public class FilmRepository implements FilmStorage {
         } catch (Exception ex) {
             log.error(String.format("Ошибка при получении списка фильмов режиссёра с идентификатором %d", directorId), ex);
             throw new InternalServerException("Ошибка при получении списка фильмов режиссёра");
+        }
+    }
+
+    @Override
+    public void deleteFilm(Long filmId) {
+        try {
+            jdbc.update(DELETE_GENRES_QUERY, filmId);
+            jdbc.update(DELETE_FILM_LIKE_QUERY, filmId);
+            jdbc.update(DELETE_REVIEWS_QUERY, filmId);
+            jdbc.update(DELETE_FILMS_RATING_QUERY, filmId);
+            jdbc.update(DELETE_QUERY, filmId);
+            log.info("Фильм с id = {} удален", filmId);
+        } catch (Exception e) {
+            log.error("Ошибка при удалении фильма");
+            throw new InternalServerException("Ошибка при удалении фильма");
         }
     }
 

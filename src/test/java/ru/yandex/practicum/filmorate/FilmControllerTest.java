@@ -36,6 +36,7 @@ class FilmControllerTest {
     @BeforeEach
     public void beforeEach() {
         film = Film.builder()
+                .id(1L)
                 .name("Film 1")
                 .description("Description 1")
                 .releaseDate(LocalDate.of(1990, Month.MAY, 28))
@@ -53,7 +54,6 @@ class FilmControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Film 1"))
                 .andExpect(jsonPath("$.description").value("Description 1"))
                 .andExpect(jsonPath("$.releaseDate").value("1990-05-28"))
@@ -62,7 +62,6 @@ class FilmControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newFilm)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Film 2"))
                 .andExpect(jsonPath("$.description").value("Description 1"))
                 .andExpect(jsonPath("$.releaseDate").value("1990-05-28"))

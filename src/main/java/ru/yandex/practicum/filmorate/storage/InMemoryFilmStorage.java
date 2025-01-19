@@ -105,6 +105,10 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
+    public void deleteFilm(Long filmId) {
+    }
+
+    @Override
     public List<Film> findByNameFilm(String requestedMovieTitleToSearch) {
         return List.of();
     }

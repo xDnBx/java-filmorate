@@ -24,6 +24,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Primary
 public class DirectorRepository implements DirectorStorage {
+
     private static final String CREATE_DIRECTOR_QUERY = "INSERT INTO directors (name) VALUES (?)";
 
     private static final String GET_ALL_DIRECTORS_QUERY = "SELECT * FROM directors";
@@ -33,6 +34,8 @@ public class DirectorRepository implements DirectorStorage {
     private static final String UPDATE_DIRECTOR_QUERY = "UPDATE directors SET name = ? WHERE id = ?";
 
     private static final String DELETE_DIRECTOR_QUERY = "DELETE FROM directors WHERE id = ?";
+
+    private static final String FIND_DIRECTOR_QUERY_BY_FILM_ID = "SELECT d.id, d.name  FROM DIRECTORS d, FILMS_DIRECTORS fd WHERE fd.FILM_ID = ? AND d.ID = fd.DIRECTOR_ID";
 
     private final JdbcTemplate jdbc;
 
@@ -101,6 +104,17 @@ public class DirectorRepository implements DirectorStorage {
             log.info("Режиссёр с идентификатором {} успешно удалён", directorId);
         } catch (Exception ex) {
             log.error(String.format("Ошибка при удалении режиссёра с идентификатором %d", directorId), ex);
+            throw new InternalServerException("Ошибка при удалении режиссёра");
+        }
+    }
+
+    @Override
+    public Collection<Director> getDirectorByFilmId(Long filmId) {
+        try {
+            log.info("Фильмы по режиссерам найдены {} успешно", filmId);
+            return jdbc.query(FIND_DIRECTOR_QUERY_BY_FILM_ID, DirectorMapper::mapToDirector, filmId);
+        } catch (Exception ex) {
+            log.error(String.format("Ошибка при поиски режиссёра по id фильма %d", filmId), ex);
             throw new InternalServerException("Ошибка при удалении режиссёра");
         }
     }

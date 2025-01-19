@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -82,5 +83,10 @@ public class FilmController {
     public void deleteFilm(@PathVariable Long filmId) {
         log.info("Запрос на удаление фильма с id = {}", filmId);
         filmService.deleteFilm(filmId);
+    }
+
+    @GetMapping("/search")
+    public List<Film> searchFilms(@NotNull(message = "query не может быть пустым") @RequestParam String query, @RequestParam(required = false) String by) {
+        return filmService.searchFilms(query, by);
     }
 }

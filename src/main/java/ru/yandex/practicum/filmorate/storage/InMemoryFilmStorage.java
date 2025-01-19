@@ -83,6 +83,11 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
+    public List<Film> findByNameFilmAndTitleDirector(String requestedMovieTitleToSearch, String title, String director) {
+        return List.of();
+    }
+
+    @Override
     public List<Film> getPopularFilms(Long count, Integer genreId, Integer year) {
         if (count <= 0) {
             log.error("Число фильмов для показа меньше или равно нулю");
@@ -101,6 +106,11 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public void deleteFilm(Long filmId) {
+    }
+
+    @Override
+    public List<Film> findByNameFilm(String requestedMovieTitleToSearch) {
+        return List.of();
     }
 
     private long generateNewId() {

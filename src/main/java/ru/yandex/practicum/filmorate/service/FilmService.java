@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dao.DirectorRepository;
 import ru.yandex.practicum.filmorate.dao.EventRepository;
 import ru.yandex.practicum.filmorate.dao.LikeRepository;
 import ru.yandex.practicum.filmorate.model.*;
@@ -11,9 +12,13 @@ import ru.yandex.practicum.filmorate.storage.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.MpaStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -25,6 +30,7 @@ public class FilmService {
     private final UserStorage userStorage;
     private final EventRepository eventRepository;
     private final LikeRepository likeRepository;
+    private final DirectorRepository directorRepository;
 
     public Collection<Film> getAllFilms() {
         log.info("Получение списка всех фильмов");
@@ -106,5 +112,46 @@ public class FilmService {
         log.info("Удаление фильма с id = {}", filmId);
         filmStorage.getFilmById(filmId);
         filmStorage.deleteFilm(filmId);
+    }
+
+    public List<Film> searchFilms(String query, String by) {
+        if (by == null) {
+            return filmStorage.findByNameFilm(query);
+        } else {
+            String director = null;
+            String title = null;
+            if (by != null && by.contains(",")) {
+                String[] titleDirector = by.split(",");
+                director = titleDirector[0];
+                title = titleDirector[1];
+            } else {
+                switch (by) {
+                    case "title":
+                        title = by;
+                        break;
+                    case "director":
+                        director = by;
+                        break;
+                }
+            }
+            List<Film> foundFilms = filmStorage.findByNameFilmAndTitleDirector(query, director, title);
+            List<Film> foundFilmWithDirectorAndOtherParam = new ArrayList<>();
+
+            for (Film foundFilm : foundFilms) {
+                foundFilm.setDirectors(directorRepository.getDirectorByFilmId(foundFilm.getId()));
+                foundFilm.setLikes(new HashSet<>(likeRepository.findByFilmId(foundFilm.getId())));
+                foundFilm.setMpa(mpaStorage.getMpaById(foundFilm.getMpa().getId()));
+                foundFilm.setGenres(genreStorage.getGenreByFilmId(foundFilm.getId()));
+
+                foundFilmWithDirectorAndOtherParam.add(foundFilm);
+            }
+
+            return sortFilmsByLikes(foundFilmWithDirectorAndOtherParam);
+        }
+    }
+
+    public static List<Film> sortFilmsByLikes(List<Film> films) {
+        return films.stream().sorted(Comparator.comparingInt(film -> film.getLikes().size())).collect(Collectors.toList());
+
     }
 }

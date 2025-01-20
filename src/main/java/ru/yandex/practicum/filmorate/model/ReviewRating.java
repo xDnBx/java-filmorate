@@ -5,8 +5,8 @@ import lombok.Data;
 
 @Data
 @Builder
-public class FilmRating {
+public class ReviewRating {
     private Integer id;
-    private Integer filmId;
+    private Integer reviewId;
     private Integer rating;
 }

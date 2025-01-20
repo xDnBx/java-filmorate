@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dao.EventRepository;
+import ru.yandex.practicum.filmorate.dao.UserRepository;
 import ru.yandex.practicum.filmorate.dao.mappers.EventMapper;
 import ru.yandex.practicum.filmorate.dto.review.event.ResponseEventDTO;
 import ru.yandex.practicum.filmorate.model.Event;
@@ -22,6 +23,7 @@ public class UserService {
     private final UserStorage userStorage;
     private final FriendsStorage friendsStorage;
     private final EventRepository eventRepository;
+    private final UserRepository userRepository;
 
     public Collection<User> getAllUsers() {
         log.info("Получение списка всех пользователей");
@@ -85,6 +87,7 @@ public class UserService {
     }
 
     public List<ResponseEventDTO> getEvents(Integer id) {
+        userRepository.getUserById(id.longValue());
         List<Event> eventList = eventRepository.findAllByUserId(id);
         return EventMapper.mapToResponseEventDTOList(eventList);
     }
@@ -92,6 +95,4 @@ public class UserService {
     public List<Film> getRecommendedFilms(Long id) {
         return userStorage.getRecommendedFilms(id);
     }
-
-    ;
 }

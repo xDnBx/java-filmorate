@@ -35,11 +35,11 @@ public class ReviewRepository {
             	r.IS_POSITIVE,
             	r.USER_ID,
             	r.FILM_ID,
-            	fr.RATING AS useful
+            	rr.RATING AS useful
             FROM
             	REVIEWS r
-            JOIN FILMS_RATING fr ON
-            	r.FILM_ID = fr.FILM_ID
+            JOIN REVIEWS_RATING rr ON
+            	r.ID = rr.REVIEW_ID
             WHERE r.ID = ?
             """;
     private static final String FIND_ONE_BY_USER_ID_AND_FILM_ID_QUERY = """
@@ -49,11 +49,11 @@ public class ReviewRepository {
             	r.IS_POSITIVE,
             	r.USER_ID,
             	r.FILM_ID,
-            	fr.RATING AS useful
+            	rr.RATING AS useful
             FROM
             	REVIEWS r
-            JOIN FILMS_RATING fr ON
-            	r.FILM_ID = fr.FILM_ID
+            JOIN REVIEWS_RATING rr ON
+            	r.ID = rr.REVIEW_ID
             WHERE r.USER_ID = ? AND r.FILM_ID = ?
             """;
     private static final String UPDATE_QUERY = """
@@ -81,13 +81,13 @@ public class ReviewRepository {
             	r.IS_POSITIVE,
             	r.USER_ID,
             	r.FILM_ID,
-            	fr.RATING AS useful
+            	rr.RATING AS useful
             FROM
             	REVIEWS r
-            JOIN FILMS_RATING fr ON
-            	r.FILM_ID = fr.FILM_ID
+            JOIN REVIEWS_RATING rr ON
+            	r.ID = rr.REVIEW_ID
             ORDER BY
-            	fr.RATING DESC
+            	rr.RATING DESC
             LIMIT ?
             """;
     private static final String FIND_ALL_BY_FILM_ID_QUERY = """
@@ -97,14 +97,14 @@ public class ReviewRepository {
             	r.IS_POSITIVE,
             	r.USER_ID,
             	r.FILM_ID,
-            	fr.RATING AS useful
+            	rr.RATING AS useful
             FROM
             	REVIEWS r
-            JOIN FILMS_RATING fr ON
-            	r.FILM_ID = fr.FILM_ID
+            JOIN REVIEWS_RATING rr ON
+            	r.ID = rr.REVIEW_ID
             WHERE r.FILM_ID = ?
             ORDER BY
-            	fr.RATING DESC
+            	rr.RATING DESC
             LIMIT ?
             """;
     private final JdbcTemplate jdbc;

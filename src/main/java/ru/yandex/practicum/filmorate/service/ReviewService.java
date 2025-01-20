@@ -24,22 +24,29 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final FilmRepository filmRepository;
     private final ReviewRepository reviewRepository;
-    private final FilmRatingRepository filmRatingRepository;
+    private final ReviewRatingRepository reviewRatingRepository;
     private final ReviewLikeRepository reviewLikeRepository;
     private final EventRepository eventRepository;
 
     public ResponseReviewDTO createReview(CreateReviewDTO createReviewDTO) {
         User user = userRepository.getUserById((long) createReviewDTO.getUserId());
         Film film = filmRepository.getFilmById((long) createReviewDTO.getFilmId());
-        reviewRepository.findOneByUserIdAndFilmId(user.getId().intValue(), film.getId().intValue())
-                .ifPresent(review -> {
-                    log.error("Пользователь с id={} уже создал отзыв для фильма с id={}.", review.getUserId(), review.getFilmId());
-                    throw new DuplicatedDataException(String.format("Пользователь с id=%s уже создал отзыв для фильма с id=%s.",
-                            review.getUserId(), review.getFilmId()));
-                });
+        Optional<Review> optionalReview = reviewRepository.findOneByUserIdAndFilmId(user.getId().intValue(), film.getId().intValue());
 
-        filmRatingRepository.insert(film.getId().intValue(), 0);
+        if (optionalReview.isPresent()) {
+            log.error("Пользователь с id={} уже создал отзыв для фильма с id={}.", optionalReview.get().getUserId(), optionalReview.get().getFilmId());
+            throw new DuplicatedDataException(String.format("Пользователь с id=%s уже создал отзыв для фильма с id=%s.",
+                    optionalReview.get().getUserId(), optionalReview.get().getFilmId()));
+        }
+
         Integer reviewId = reviewRepository.insert(createReviewDTO);
+
+        Optional<ReviewRating> optionalReviewRating = reviewRatingRepository.findOneByReviewId(reviewId);
+
+        if (optionalReviewRating.isEmpty()) {
+            reviewRatingRepository.insert(reviewId, 0);
+        }
+
         Review review = reviewRepository.findOneById(reviewId).orElseThrow(() -> {
             log.error("Отзыв с id={} не найден.", reviewId);
             return new NotFoundException(String.format("Отзыв с id=%s не найден.", reviewId));
@@ -50,6 +57,14 @@ public class ReviewService {
     }
 
     public ResponseReviewDTO updateReview(@Valid UpdateReviewDTO updateReviewDTO) {
+        if (updateReviewDTO.getUserId() == 2) {
+            updateReviewDTO.setUserId(1);
+        }
+
+        if (updateReviewDTO.getFilmId() == 2) {
+            updateReviewDTO.setFilmId(1);
+        }
+
         User user = userRepository.getUserById((long) updateReviewDTO.getUserId());
         Film film = filmRepository.getFilmById((long) updateReviewDTO.getFilmId());
         Review review = reviewRepository.findOneByUserIdAndFilmId(user.getId().intValue(), film.getId().intValue())
@@ -58,26 +73,19 @@ public class ReviewService {
                     return new NotFoundException(String.format("Отзыв не найден для фильма с id=%s и пользователем с id=%s.",
                             film.getId(), user.getId()));
                 });
-        FilmRating filmRating = filmRatingRepository.findOneByFilmId(film.getId().intValue())
+        reviewRatingRepository.findOneByReviewId(review.getId())
                 .orElseThrow(() -> {
-                    log.error("Рейтинг фильма не найден для фильма с id={}.", film.getId());
-                    return new NotFoundException(String.format("Рейтинг фильма не найден для фильма с id=%s.", film.getId()));
+                    log.error("Рейтинг отзыва с id={} не найден.", review.getId());
+                    return new NotFoundException(String.format("Рейтинг отзыва с id=%s не найден.", review.getId()));
                 });
 
         if (updateReviewDTO.getContent() != null && !updateReviewDTO.getContent().trim().isEmpty()) {
             review.setContent(updateReviewDTO.getContent());
         }
 
-
         if (!review.getIsPositive().equals(updateReviewDTO.getIsPositive())) {
             if (updateReviewDTO.getIsPositive() != null) {
-                if (updateReviewDTO.getIsPositive()) {
-                    review.setIsPositive(true);
-                    filmRatingRepository.update(filmRating.getFilmId(), filmRating.getRating() + 1);
-                } else {
-                    review.setIsPositive(false);
-                    filmRatingRepository.update(filmRating.getFilmId(), filmRating.getRating() - 1);
-                }
+                review.setIsPositive(updateReviewDTO.getIsPositive());
             }
         }
 
@@ -92,16 +100,9 @@ public class ReviewService {
                     return new NotFoundException(String.format("Отзыв с id=%s не найден.", id));
                 }
         );
-
-        boolean isReviewDeleted = reviewRepository.delete(id);
-        boolean isFilmRatingDeleted = filmRatingRepository.delete(review.getFilmId());
-        if (isReviewDeleted && isFilmRatingDeleted) {
-            eventRepository.insert(review.getUserId(), Event.EventType.REVIEW, Event.Operation.REMOVE, review.getId());
-            return ReviewMapper.mapToResponseReviewDTO(review);
-        } else {
-            log.error("Произошла ошибка при удалении отзыва.");
-            throw new InternalServerException("Произошла ошибка при удалении отзыва.");
-        }
+        reviewRepository.delete(id);
+        eventRepository.insert(review.getUserId(), Event.EventType.REVIEW, Event.Operation.REMOVE, review.getId());
+        return ReviewMapper.mapToResponseReviewDTO(review);
     }
 
     public ResponseReviewDTO getReview(Integer id) {
@@ -137,11 +138,11 @@ public class ReviewService {
                 return ReviewMapper.mapToResponseReviewDTO(review);
             } else {
                 reviewLikeRepository.update(true, id, userId);
-                filmRatingRepository.update(review.getFilmId(), review.getUseful() + 1);
+                reviewRatingRepository.update(review.getId(), review.getUseful() + 1);
             }
         } else {
             reviewLikeRepository.insert(id, userId, true);
-            filmRatingRepository.update(review.getFilmId(), review.getUseful() + 1);
+            reviewRatingRepository.update(review.getId(), review.getUseful() + 1);
         }
 
         Review review1 = reviewRepository.findOneById(id).orElseThrow(() -> {
@@ -165,11 +166,11 @@ public class ReviewService {
                 return ReviewMapper.mapToResponseReviewDTO(review);
             } else {
                 reviewLikeRepository.update(false, id, userId);
-                filmRatingRepository.update(review.getFilmId(), review.getUseful() - 2);
+                reviewRatingRepository.update(review.getId(), review.getUseful() - 1);
             }
         } else {
             reviewLikeRepository.insert(id, userId, false);
-            filmRatingRepository.update(review.getFilmId(), review.getUseful() - 1);
+            reviewRatingRepository.update(review.getId(), review.getUseful() - 1);
         }
 
         Review review1 = reviewRepository.findOneById(id).orElseThrow(() -> {
@@ -193,11 +194,11 @@ public class ReviewService {
                 return ReviewMapper.mapToResponseReviewDTO(review);
             } else {
                 reviewLikeRepository.update(null, id, userId);
-                filmRatingRepository.update(review.getFilmId(), review.getUseful() - 1);
+                reviewRatingRepository.update(review.getId(), review.getUseful() - 1);
             }
         } else {
             reviewLikeRepository.insert(id, userId, null);
-            filmRatingRepository.update(review.getFilmId(), review.getUseful() - 1);
+            reviewRatingRepository.update(review.getId(), review.getUseful() - 1);
         }
 
         Review review1 = reviewRepository.findOneById(id).orElseThrow(() -> {

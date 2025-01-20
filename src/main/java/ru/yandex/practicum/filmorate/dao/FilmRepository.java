@@ -118,6 +118,8 @@ public class FilmRepository implements FilmStorage {
 
     private static final String INSERT_LIKE_QUERY = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
 
+    private static final String EXIST_LIKE_QUERY = "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ? ";
+
     private static final String DELETE_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
 
     private static final String DELETE_GENRES_QUERY = "DELETE FROM films_genres WHERE film_id = ?";
@@ -225,6 +227,7 @@ public class FilmRepository implements FilmStorage {
 
     @Override
     public void addLike(Long id, Long userId) {
+        if (existLikeFilmAndUser(id, userId)) return;
         try {
             jdbc.update(INSERT_LIKE_QUERY, id, userId);
             log.info("Пользователь с id = {} поставил лайк фильму с id = {}", userId, id);
@@ -467,4 +470,15 @@ public class FilmRepository implements FilmStorage {
         }
         return films;
     }
+
+    private boolean existLikeFilmAndUser(Long filmId, Long userId) {
+        try {
+            Integer count = jdbc.queryForObject(EXIST_LIKE_QUERY, Integer.class, filmId, userId);
+            return count > 0;
+        } catch (Exception e) {
+            throw new InternalServerException("Ошибка при проверке лайка пользователя");
+        }
+    }
+
+
 }

@@ -14,11 +14,9 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -120,7 +118,7 @@ public class FilmService {
         } else {
             String director = null;
             String title = null;
-            if (by != null && by.contains(",")) {
+            if (by.contains(",")) {
                 String[] titleDirector = by.split(",");
                 director = titleDirector[0];
                 title = titleDirector[1];
@@ -151,7 +149,9 @@ public class FilmService {
     }
 
     public static List<Film> sortFilmsByLikes(List<Film> films) {
-        return films.stream().sorted(Comparator.comparingInt(film -> film.getLikes().size())).collect(Collectors.toList());
-
+        // Сортируем список фильмов по количеству лайков
+        films.sort((film1, film2) -> Integer.compare(film2.getLikes().size(), film1.getLikes().size()));
+        return films;
     }
+
 }

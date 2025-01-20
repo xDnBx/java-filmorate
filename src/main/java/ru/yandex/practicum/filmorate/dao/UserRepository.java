@@ -84,6 +84,10 @@ public class UserRepository implements UserStorage {
     @Override
     public User createUser(User user) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
+        String name = user.getName();
+        if (name == null || name.isBlank() || name.isEmpty()) {
+            user.setName(user.getLogin());
+        }
         try {
             jdbc.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(INSERT_QUERY, Statement.RETURN_GENERATED_KEYS);
@@ -107,6 +111,10 @@ public class UserRepository implements UserStorage {
     @Override
     public User updateUser(User newUser) {
         getUserById(newUser.getId());
+        String name = newUser.getName();
+        if (name == null || name.isBlank() || name.isEmpty()) {
+            newUser.setName(newUser.getLogin());
+        }
         try {
             jdbc.update(UPDATE_QUERY, newUser.getEmail(), newUser.getLogin(), newUser.getName(),
                     newUser.getBirthday().toString(), newUser.getId());

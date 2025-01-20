@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.Like;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,11 +33,16 @@ public class LikeRepository {
 
     public List<Long> findByFilmId(Long filmId) {
         try {
-            List<Long> result = Collections.singletonList(jdbc.queryForObject(FIND_LIKES_BY_FILM_ID, Long.class, filmId));
-            log.info("Получено {} лайков для фильма с id = {}", result.size(), filmId);
+            List<Long> result = jdbc.query(
+                    FIND_LIKES_BY_FILM_ID,
+                    new Object[]{filmId},
+                    (rs, rowNum) -> rs.getLong(1)
+            );
+            log.info("Получено {} лайков для фильма с id = {}", result.size(), filmId);
             return result;
         } catch (EmptyResultDataAccessException ignored) {
             return new ArrayList<>();
         }
     }
+
 }

@@ -1,50 +1,55 @@
 package ru.yandex.practicum.filmorate.dao;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import ru.yandex.practicum.filmorate.dao.mapper.EventMapper;
+import ru.yandex.practicum.filmorate.dao.queries.EventQueries;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.model.Event;
+import ru.yandex.practicum.filmorate.model.EventOperation;
+import ru.yandex.practicum.filmorate.model.EventType;
+import ru.yandex.practicum.filmorate.storage.EventStorage;
 
-import java.util.List;
+import java.util.Collection;
 
-@Slf4j
+/**
+ * Хранилище событий.
+ */
 @Repository
-@RequiredArgsConstructor
-public class EventRepository {
-    private static final String INSERT_QUERY = """
-            INSERT INTO events (
-            	user_id,
-            	event_type,
-            	operation,
-            	entity_id)
-            VALUES (?, ?, ?, ?)
-            """;
-    private static final String FIND_ALL_BY_USER_ID_QUERY = """
-            SELECT
-            	*
-            FROM
-            	events
-            WHERE user_id = ?
-            """;
-    private final JdbcTemplate jdbc;
-    private final RowMapper<Event> eventRowMapper;
-
-    public void insert(Integer userId, Event.EventType eventType, Event.Operation operation, Integer entityId) {
-        int rowsUpdated = jdbc.update(INSERT_QUERY,
-                userId,
-                eventType.toString(),
-                operation.toString(),
-                entityId);
-        if (rowsUpdated == 0) {
-            log.error("Произошла ошибка при создании события.");
-            throw new InternalServerException("Произошла ошибка при создании события.");
+@Slf4j
+public class EventRepository extends BaseRepository implements EventStorage {
+    /**
+     * Создать новое событие.
+     *
+     * @param userId    идентификатор пользователя.
+     * @param eventType тип события.
+     * @param operation тип операции.
+     * @param entityId  идентификатор сущности, связанной с событием.
+     */
+    @Override
+    public void createEvent(long userId, EventType eventType, EventOperation operation, long entityId) {
+        try {
+            long id = this.insert(EventQueries.CREATE_EVENT_QUERY, userId, eventType.toString(), operation.toString(), entityId);
+            log.debug("Событие {} {} успешно добавлено с id = {}", operation, eventType, id);
+        } catch (Throwable ex) {
+            log.error("Ошибка при добавлении события {} {}: [{}] {}", operation, eventType, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 
-    public List<Event> findAllByUserId(Integer userId) {
-        return jdbc.query(FIND_ALL_BY_USER_ID_QUERY, eventRowMapper, userId);
+    /**
+     * Получить список событий пользователя.
+     *
+     * @param userId идентификатор пользователя.
+     * @return список событий.
+     */
+    @Override
+    public Collection<Event> getUserEvents(long userId) {
+        try {
+            return this.findMany(EventQueries.GET_USER_EVENTS_QUERY, EventMapper::mapToEvent, userId);
+        } catch (Throwable ex) {
+            log.error("Ошибка при получении списка режиссёров: [{}] {}", ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
     }
 }

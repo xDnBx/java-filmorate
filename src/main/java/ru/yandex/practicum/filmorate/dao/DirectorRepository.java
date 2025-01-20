@@ -1,121 +1,103 @@
 package ru.yandex.practicum.filmorate.dao;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Primary;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
-import ru.yandex.practicum.filmorate.dao.mappers.DirectorMapper;
+import ru.yandex.practicum.filmorate.dao.mapper.DirectorMapper;
+import ru.yandex.practicum.filmorate.dao.queries.DirectorQueries;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.storage.DirectorStorage;
 
-import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.util.Collection;
-import java.util.Objects;
+import java.util.Optional;
 
+/**
+ * Хранилище режиссёров.
+ */
 @Repository
 @Slf4j
-@RequiredArgsConstructor
-@Primary
-public class DirectorRepository implements DirectorStorage {
-
-    private static final String CREATE_DIRECTOR_QUERY = "INSERT INTO directors (name) VALUES (?)";
-
-    private static final String GET_ALL_DIRECTORS_QUERY = "SELECT * FROM directors";
-
-    private static final String GET_DIRECTOR_BY_ID_QUERY = "SELECT * FROM directors WHERE id = ?";
-
-    private static final String UPDATE_DIRECTOR_QUERY = "UPDATE directors SET name = ? WHERE id = ?";
-
-    private static final String DELETE_DIRECTOR_QUERY = "DELETE FROM directors WHERE id = ?";
-
-    private static final String FIND_DIRECTOR_QUERY_BY_FILM_ID = "SELECT d.id, d.name  FROM DIRECTORS d, FILMS_DIRECTORS fd WHERE fd.FILM_ID = ? AND d.ID = fd.DIRECTOR_ID";
-
-    private final JdbcTemplate jdbc;
-
+public class DirectorRepository extends BaseRepository implements DirectorStorage {
+    /**
+     * Создать нового режиссёра.
+     *
+     * @param director режиссёр.
+     * @return режиссёр.
+     */
     @Override
     public Director createDirector(Director director) {
         try {
-            KeyHolder keyHolder = new GeneratedKeyHolder();
-
-            jdbc.update(connection -> {
-                PreparedStatement ps = connection.prepareStatement(CREATE_DIRECTOR_QUERY, Statement.RETURN_GENERATED_KEYS);
-                ps.setString(1, director.getName());
-                return ps;
-            }, keyHolder);
-
-            Integer id = Objects.requireNonNull(keyHolder.getKey()).intValue();
+            long id = this.insert(DirectorQueries.CREATE_DIRECTOR_QUERY, director.getName());
             director.setId(id);
 
-            log.info("Режиссёр успешно добавлен с идентификатором {}", id);
-
+            log.debug("Режиссёр {} успешно добавлен с id = {}", director.getName(), id);
             return director;
-        } catch (Exception ex) {
-            log.error("Ошибка при добавлении режиссёра", ex);
-            throw new InternalServerException("Ошибка при добавлении режиссёра");
+        } catch (Throwable ex) {
+            log.error("Ошибка при добавлении режиссёра: [{}] {}", ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 
+    /**
+     * Получить список всех режиссёров.
+     *
+     * @return список режиссёров.
+     */
     @Override
     public Collection<Director> getAllDirectors() {
         try {
-            return jdbc.query(GET_ALL_DIRECTORS_QUERY, DirectorMapper::mapToDirector);
-        } catch (Exception ex) {
-            log.error("Ошибка при получении списка режиссёров", ex);
-            throw new InternalServerException("Ошибка при получении списка режиссёров");
+            return this.findMany(DirectorQueries.GET_ALL_DIRECTORS_QUERY, DirectorMapper::mapToDirector);
+        } catch (Throwable ex) {
+            log.error("Ошибка при получении списка режиссёров: [{}] {}", ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 
+    /**
+     * Получить режиссёра по его идентификатору.
+     *
+     * @param directorId идентификатор режиссёра.
+     * @return режиссёр.
+     */
     @Override
-    public Director getDirectorById(Integer directorId) {
+    public Optional<Director> getDirectorById(long directorId) {
         try {
-            return jdbc.queryForObject(GET_DIRECTOR_BY_ID_QUERY, DirectorMapper::mapToDirector, directorId);
-        } catch (EmptyResultDataAccessException ex) {
-            log.error(String.format("Ошибка при получении режиссёра с идентификатором %d", directorId), ex);
-            throw new NotFoundException(String.format("Режиссёр с идентификатором %d не найден", directorId));
+            return this.findOne(DirectorQueries.GET_DIRECTOR_BY_ID_QUERY, DirectorMapper::mapToDirector, directorId);
+        } catch (Throwable ex) {
+            log.error("Ошибка при получении режиссёра с id = {}: [{}] {}", directorId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+
         }
     }
 
+    /**
+     * Обновить режиссёра.
+     *
+     * @param director режиссёр.
+     */
     @Override
-    public Director updateDirector(Director newDirector) {
-        getDirectorById(newDirector.getId());
-
+    public void updateDirector(Director director) {
         try {
-            jdbc.update(UPDATE_DIRECTOR_QUERY, newDirector.getName(), newDirector.getId());
-
-            log.info("Обновление режиссёра с идентификатором {} прошло успешно", newDirector.getId());
-            return getDirectorById(newDirector.getId());
-        } catch (Exception e) {
-            log.error(String.format("Ошибка при обновлении режиссёра с идентификатором %d", newDirector.getId()), e);
-            throw new InternalServerException("Ошибка при обновлении режиссёра");
+            this.update(DirectorQueries.UPDATE_DIRECTOR_QUERY, director.getName(), director.getId());
+            log.debug("Режиссёр с id = {} успешно обновлен", director.getId());
+        } catch (Throwable ex) {
+            log.error("Ошибка при обновлении режиссёра с id = {}: [{}] {}", director.getId(), ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 
+    /**
+     * Удалить режиссёра.
+     *
+     * @param directorId идентификатор режиссёра.
+     */
     @Override
-    public void deleteDirector(Integer directorId) {
+    public void deleteDirector(long directorId) {
         try {
-            jdbc.update(DELETE_DIRECTOR_QUERY, directorId);
-            log.info("Режиссёр с идентификатором {} успешно удалён", directorId);
-        } catch (Exception ex) {
-            log.error(String.format("Ошибка при удалении режиссёра с идентификатором %d", directorId), ex);
-            throw new InternalServerException("Ошибка при удалении режиссёра");
-        }
-    }
-
-    @Override
-    public Collection<Director> getDirectorByFilmId(Long filmId) {
-        try {
-            log.info("Фильмы по режиссерам найдены {} успешно", filmId);
-            return jdbc.query(FIND_DIRECTOR_QUERY_BY_FILM_ID, DirectorMapper::mapToDirector, filmId);
-        } catch (Exception ex) {
-            log.error(String.format("Ошибка при поиски режиссёра по id фильма %d", filmId), ex);
-            throw new InternalServerException("Ошибка при удалении режиссёра");
+            this.delete(DirectorQueries.DELETE_DIRECTOR_QUERY, directorId);
+            log.debug("Режиссёр с id = {} успешно удалён", directorId);
+        } catch (Throwable ex) {
+            log.error("Ошибка при удалении режиссёра с id = {}: [{}] {}", directorId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 }

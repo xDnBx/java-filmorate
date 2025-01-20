@@ -3,16 +3,24 @@ package ru.yandex.practicum.filmorate.storage;
 import ru.yandex.practicum.filmorate.model.Genre;
 
 import java.util.Collection;
-import java.util.LinkedHashSet;
+import java.util.Optional;
 
+/**
+ * Контракт хранилища жанров.
+ */
 public interface GenreStorage {
-
+    /**
+     * Получить список всех жанров.
+     *
+     * @return список жанров.
+     */
     Collection<Genre> getAllGenres();
 
-    Genre getGenreById(Integer id);
-
-    void checkGenres(LinkedHashSet<Genre> genres);
-
-    LinkedHashSet<Genre> getGenreByFilmId(Long filmId);
-
+    /**
+     * Получить жанр по его идентификатору.
+     *
+     * @param genreId идентификатор жанра.
+     * @return жанр.
+     */
+    Optional<Genre> getGenreById(long genreId);
 }

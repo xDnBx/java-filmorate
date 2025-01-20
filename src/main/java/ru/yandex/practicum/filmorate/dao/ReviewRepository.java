@@ -1,176 +1,190 @@
 package ru.yandex.practicum.filmorate.dao;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
-import ru.yandex.practicum.filmorate.dto.review.CreateReviewDTO;
+import ru.yandex.practicum.filmorate.dao.mapper.BooleanMapper;
+import ru.yandex.practicum.filmorate.dao.mapper.ReviewMapper;
+import ru.yandex.practicum.filmorate.dao.queries.ReviewQueries;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.model.Review;
+import ru.yandex.practicum.filmorate.storage.ReviewStorage;
 
-import java.sql.PreparedStatement;
-import java.sql.Statement;
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
-@Slf4j
 @Repository
-@RequiredArgsConstructor
-public class ReviewRepository {
-    private static final String INSERT_QUERY = """
-            INSERT INTO reviews (
-            	content,
-            	is_positive,
-            	user_id,
-            	film_id)
-            VALUES (?, ?, ?, ?)
-            """;
-    private static final String FIND_ONE_BY_ID_QUERY = """
-            SELECT
-            	r.ID,
-            	r.CONTENT,
-            	r.IS_POSITIVE,
-            	r.USER_ID,
-            	r.FILM_ID,
-            	rr.RATING AS useful
-            FROM
-            	REVIEWS r
-            JOIN REVIEWS_RATING rr ON
-            	r.ID = rr.REVIEW_ID
-            WHERE r.ID = ?
-            """;
-    private static final String FIND_ONE_BY_USER_ID_AND_FILM_ID_QUERY = """
-            SELECT
-            	r.ID,
-            	r.CONTENT,
-            	r.IS_POSITIVE,
-            	r.USER_ID,
-            	r.FILM_ID,
-            	rr.RATING AS useful
-            FROM
-            	REVIEWS r
-            JOIN REVIEWS_RATING rr ON
-            	r.ID = rr.REVIEW_ID
-            WHERE r.USER_ID = ? AND r.FILM_ID = ?
-            """;
-    private static final String UPDATE_QUERY = """
-            UPDATE
-            	reviews
-            SET
-            	content = ?,
-            	is_positive = ?,
-            	user_id = ?,
-            	film_id = ?
-            WHERE
-            	id = ?
-            """;
-    private static final String DELETE_QUERY = """
-            DELETE
-            FROM
-            	reviews
-            WHERE
-            	id = ?
-            """;
-    private static final String FIND_ALL_QUERY = """
-            SELECT
-            	r.ID,
-            	r.CONTENT,
-            	r.IS_POSITIVE,
-            	r.USER_ID,
-            	r.FILM_ID,
-            	rr.RATING AS useful
-            FROM
-            	REVIEWS r
-            JOIN REVIEWS_RATING rr ON
-            	r.ID = rr.REVIEW_ID
-            ORDER BY
-            	rr.RATING DESC
-            LIMIT ?
-            """;
-    private static final String FIND_ALL_BY_FILM_ID_QUERY = """
-            SELECT
-            	r.ID,
-            	r.CONTENT,
-            	r.IS_POSITIVE,
-            	r.USER_ID,
-            	r.FILM_ID,
-            	rr.RATING AS useful
-            FROM
-            	REVIEWS r
-            JOIN REVIEWS_RATING rr ON
-            	r.ID = rr.REVIEW_ID
-            WHERE r.FILM_ID = ?
-            ORDER BY
-            	rr.RATING DESC
-            LIMIT ?
-            """;
-    private final JdbcTemplate jdbc;
-    private final RowMapper<Review> reviewRowMapper;
+@Slf4j
+public class ReviewRepository extends BaseRepository implements ReviewStorage {
 
-    public Integer insert(CreateReviewDTO createReviewDTO) {
-        GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbc.update(connection -> {
-            PreparedStatement ps = connection
-                    .prepareStatement(INSERT_QUERY, Statement.RETURN_GENERATED_KEYS);
-            ps.setObject(1, createReviewDTO.getContent());
-            ps.setObject(2, createReviewDTO.getIsPositive());
-            ps.setObject(3, createReviewDTO.getUserId());
-            ps.setObject(4, createReviewDTO.getFilmId());
-            return ps;
-        }, keyHolder);
+    //region Отзывы
 
-        Integer id = keyHolder.getKeyAs(Integer.class);
-        if (id != null) {
-            return id;
-        } else {
-            log.error("Произошла ошибка при сохранении отзыва.");
-            throw new InternalServerException("Произошла ошибка при сохранении отзыва.");
-        }
-    }
-
-    private Optional<Review> findOne(String query, Object... params) {
+    /**
+     * Создать новый отзыв.
+     *
+     * @param review отзыв.
+     * @return отзыв.
+     */
+    @Override
+    public Review createReview(Review review) {
         try {
-            Review result = jdbc.queryForObject(query, reviewRowMapper, params);
-            return Optional.ofNullable(result);
-        } catch (EmptyResultDataAccessException ignored) {
-            return Optional.empty();
+            long id = this.insert(ReviewQueries.CREATE_REVIEW_QUERY, review.getContent(), review.getIsPositive(), review.getUserId(), review.getFilmId());
+            review.setId(id);
+
+            log.debug("Отзыв от пользователя с id = {} к фильму с id = {} успешно добавлен с id = {}", review.getUserId(), review.getFilmId(), id);
+            return review;
+        } catch (Throwable ex) {
+            log.error("Ошибка при добавлении отзыва от пользователя с id = {} к фильму с id = {}: [{}] {}", review.getUserId(), review.getFilmId(), ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 
-    public Optional<Review> findOneById(Integer id) {
-        return findOne(FIND_ONE_BY_ID_QUERY, id);
-    }
-
-    public Optional<Review> findOneByUserIdAndFilmId(Integer userId, Integer filmId) {
-        return findOne(FIND_ONE_BY_USER_ID_AND_FILM_ID_QUERY, userId, filmId);
-    }
-
-    public void update(Review review) {
-        int rowsUpdated = jdbc.update(UPDATE_QUERY,
-                review.getContent(),
-                review.getIsPositive(),
-                review.getUserId(),
-                review.getFilmId(),
-                review.getId());
-        if (rowsUpdated == 0) {
-            log.error("Произошла ошибка при обновлении отзыва.");
-            throw new InternalServerException("Произошла ошибка при обновлении отзыва.");
+    /**
+     * Получить список отзывов.
+     *
+     * @param count количество отзывов, которое необходимо получить.
+     * @return список отзывов.
+     */
+    @Override
+    public Collection<Review> getReviews(int count) {
+        try {
+            return this.findMany(ReviewQueries.GET_REVIEWS_QUERY, ReviewMapper::mapToReview, count);
+        } catch (Throwable ex) {
+            log.error("Ошибка при получении списка всех отзывов: [{}] {}", ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 
-    public boolean delete(Integer id) {
-        int rowsDeleted = jdbc.update(DELETE_QUERY, id);
-        return rowsDeleted > 0;
+    /**
+     * Получить список отзывов к фильму.
+     *
+     * @param filmId идентификатор фильма.
+     * @param count  количество отзывов, которое необходимо получить.
+     * @return список отзывов.
+     */
+    @Override
+    public Collection<Review> getFilmReviews(long filmId, int count) {
+        try {
+            return this.findMany(ReviewQueries.GET_REVIEWS_QUERY.replace("1 = 1", "r.film_id = ?"), ReviewMapper::mapToReview, filmId, count);
+        } catch (Throwable ex) {
+            log.error("Ошибка при получении списка отзывов для фильма с id = {}: [{}] {}", filmId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
     }
 
-    public List<Review> findAll(Integer count) {
-        return jdbc.query(FIND_ALL_QUERY, reviewRowMapper, count);
+    /**
+     * Получить отзыв по его идентификатору.
+     *
+     * @param reviewId идентификатор отзыва.
+     * @return отзыв.
+     */
+    @Override
+    public Optional<Review> getReviewById(long reviewId) {
+        try {
+            return this.findOne(ReviewQueries.GET_REVIEW_BY_ID_QUERY, ReviewMapper::mapToReview, reviewId);
+        } catch (Throwable ex) {
+            log.error("Ошибка при получении отзыва с id = {}: [{}] {}", reviewId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
     }
 
-    public List<Review> findAllByFilmId(Integer filmId, Integer count) {
-        return jdbc.query(FIND_ALL_BY_FILM_ID_QUERY, reviewRowMapper, filmId, count);
+    /**
+     * Обновить отзыв.
+     *
+     * @param review отзыв.
+     */
+    @Override
+    public void updateReview(Review review) {
+        try {
+            this.update(ReviewQueries.UPDATE_REVIEW_QUERY, review.getContent(), review.getIsPositive(), review.getId());
+        } catch (Throwable ex) {
+            log.error("Ошибка при обновлении отзыва с id = {}: [{}] {}", review.getId(), ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
     }
+
+    /**
+     * Удалить отзыв.
+     *
+     * @param reviewId идентификатор отзыва.
+     */
+    @Override
+    public void deleteReview(long reviewId) {
+        try {
+            this.delete(ReviewQueries.DELETE_REVIEW_QUERY, reviewId);
+        } catch (Throwable ex) {
+            log.error("Ошибка при удалении отзыва с id = {}: [{}] {}", reviewId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
+    }
+
+    //endregion
+
+    //region Лайки
+
+    /**
+     * Добавить лайк к отзыву.
+     *
+     * @param reviewId идентификатор отзыва.
+     * @param userId   идентификатор пользователя.
+     * @param isLiked  признак, нравится ли пользователю отзыв.
+     */
+    @Override
+    public void addLikeToReview(long reviewId, long userId, boolean isLiked) {
+        try {
+            this.insert(ReviewQueries.ADD_LIKE_TO_REVIEW_QUERY, reviewId, userId, isLiked);
+        } catch (Throwable ex) {
+            log.error("Ошибка при добавления лайка к отзыву с id = {} от пользователя с id = {}: [{}] {}", reviewId, userId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
+    }
+
+    /**
+     * Проверить существует ли у отзыва лайк от пользователя.
+     * @param reviewId идентификатор отзыва.
+     * @param userId идентификатор пользователя.
+     */
+    @Override
+    public boolean isLikeForReviewExist(long reviewId, long userId) {
+        try {
+            return this.findOne(ReviewQueries.IS_LIKE_FOR_REVIEW_EXISTS_QUERY, BooleanMapper::mapToBoolean, reviewId, userId).orElse(false);
+        } catch (Throwable ex) {
+            log.error("Ошибка при проверке существования лайка к отзыву с id = {} от пользователя с id = {}: [{}] {}", reviewId, userId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
+    }
+
+    /**
+     * Обновить лайк у отзыва.
+     *
+     * @param reviewId идентификатор отзыва.
+     * @param userId   идентификатор пользователя.
+     * @param isLiked  признак, нравится ли пользователю отзыв.
+     */
+    @Override
+    public void updateLikeForReview(long reviewId, long userId, boolean isLiked) {
+        try {
+            this.update(ReviewQueries.UPDATE_LIKE_FOR_REVIEW_QUERY, isLiked, reviewId, userId);
+        } catch (Throwable ex) {
+            log.error("Ошибка при обновлении лайка у отзыва с id = {} от пользователя с id = {}: [{}] {}", reviewId, userId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
+    }
+
+    /**
+     * Удалить лайк у отзыва.
+     *
+     * @param reviewId идентификатор отзыва.
+     * @param userId   идентификатор пользователя.
+     */
+    @Override
+    public void removeLikeFromReview(long reviewId, long userId) {
+        try {
+            this.delete(ReviewQueries.REMOVE_LIKE_FROM_REVIEW_QUERY, reviewId, userId);
+        } catch (Throwable ex) {
+            log.error("Ошибка при удалении лайка пользователя с id = {} у отзыва с id = {}: [{}] {}", userId, reviewId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
+        }
+    }
+
+    //endregion
 }

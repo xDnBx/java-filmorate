@@ -1,16 +1,23 @@
 package ru.yandex.practicum.filmorate.model;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
-@Data
-@Builder(toBuilder = true)
+/**
+ * Жанр.
+ */
 @AllArgsConstructor
+@Builder(toBuilder = true)
+@Data
 public class Genre {
-    private Integer id;
+    /**
+     * Идентификатор жанра.
+     */
+    private long id;
 
-    @NotBlank
+    /**
+     * Название жанра.
+     */
     private String name;
 }

@@ -1,54 +1,50 @@
 package ru.yandex.practicum.filmorate.dao;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import ru.yandex.practicum.filmorate.dao.mappers.MpaMapper;
+import ru.yandex.practicum.filmorate.dao.mapper.MpaMapper;
+import ru.yandex.practicum.filmorate.dao.queries.MpaQueries;
 import ru.yandex.practicum.filmorate.exception.InternalServerException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.MpaStorage;
 
 import java.util.Collection;
+import java.util.Optional;
 
+/**
+ * Хранилище оценок Ассоциации кинокомпаний.
+ */
 @Repository
 @Slf4j
-@RequiredArgsConstructor
-public class MpaRepository implements MpaStorage {
-    private static final String GET_ALL_QUERY = "SELECT * FROM mpa";
-    private static final String FIND_BY_ID_QUERY = "SELECT * FROM mpa WHERE id = ?";
-    private final JdbcTemplate jdbc;
-
+public class MpaRepository extends BaseRepository implements MpaStorage {
+    /**
+     * Получить список оценок Ассоциации кинокомпаний.
+     *
+     * @return список оценок Ассоциации кинокомпаний.
+     */
     @Override
     public Collection<Mpa> getAllMpa() {
         try {
-            return jdbc.query(GET_ALL_QUERY, MpaMapper::mapToMpa);
-        } catch (Exception e) {
-            log.error("Ошибка при получении списка рейтингов");
-            throw new InternalServerException("Ошибка при получении списка рейтингов");
+            return this.findMany(MpaQueries.GET_ALL_MPA_QUERY, MpaMapper::mapToMpa);
+        } catch (Throwable ex) {
+            log.error("Ошибка при получении списка рейтингов: [{}] {}", ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 
+    /**
+     * Получить оценку Ассоциации кинокомпаний по её идентификатору.
+     *
+     * @param mpaId идентификатор оценки Ассоциации кинокомпаний.
+     * @return оценка Ассоциации кинокомпаний.
+     */
     @Override
-    public Mpa getMpaById(Integer id) {
+    public Optional<Mpa> getMpaById(long mpaId) {
         try {
-            return jdbc.queryForObject(FIND_BY_ID_QUERY, MpaMapper::mapToMpa, id);
-        } catch (EmptyResultDataAccessException e) {
-            log.error("Ошибка при поиске по id рейтинга");
-            throw new NotFoundException("Рейтинг с данным id не найден");
-        }
-    }
-
-    @Override
-    public void checkMpa(Integer id) {
-        try {
-            jdbc.queryForObject(FIND_BY_ID_QUERY, MpaMapper::mapToMpa, id);
-        } catch (EmptyResultDataAccessException e) {
-            log.error("Ошибка при поиске рейтинга");
-            throw new ValidationException("Рейтинг не найден");
+            return this.findOne(MpaQueries.GET_MPA_BY_ID_QUERY, MpaMapper::mapToMpa, mpaId);
+        } catch (Throwable ex) {
+            log.error("Ошибка при получении оценки Ассоциации кинокомпаний с id = {}: [{}] {}", mpaId, ex.getClass().getSimpleName(), ex.getMessage());
+            throw new InternalServerException();
         }
     }
 }

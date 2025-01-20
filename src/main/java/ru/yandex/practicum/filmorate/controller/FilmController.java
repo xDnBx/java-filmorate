@@ -6,86 +6,171 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.dto.film.CreateFilmRequestDto;
+import ru.yandex.practicum.filmorate.dto.film.FilmDto;
+import ru.yandex.practicum.filmorate.dto.film.UpdateFilmRequestDto;
+import ru.yandex.practicum.filmorate.mapper.FilmMapper;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.Collection;
-import java.util.List;
 
-@Slf4j
-@RestController
+/**
+ * Контроллер для запросов фильмов.
+ */
 @RequestMapping("/films")
 @RequiredArgsConstructor
-public class FilmController {
+@RestController
+@Slf4j
+public final class FilmController {
+    /**
+     * Сервис для работы с фильмами.
+     */
     private final FilmService filmService;
 
-    @GetMapping
-    public Collection<Film> getAllFilms() {
-        log.info("Запрос на получение списка всех фильмов");
-        return filmService.getAllFilms();
-    }
+    //region Фильмы
 
+    /**
+     * Создать новый фильм.
+     *
+     * @param dto трансферный объект запроса на создание фильма.
+     * @return фильм.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Film createFilm(@Valid @RequestBody Film film) {
-        log.info("Запрос на добавление нового фильма: {}", film.getName());
-        return filmService.createFilm(film);
+    public FilmDto createFilm(@Valid @RequestBody CreateFilmRequestDto dto) {
+        log.info("Запрос на добавление нового фильма: {}", dto.getName());
+        return FilmMapper.mapToFilmDto(this.filmService.createFilm(FilmMapper.mapToFilm(dto)));
     }
 
-    @PutMapping
-    public Film updateFilm(@Valid @RequestBody Film newFilm) {
-        log.info("Запрос на обновление фильма с id = {}", newFilm.getId());
-        return filmService.updateFilm(newFilm);
+    /**
+     * Получить список всех фильмов.
+     *
+     * @return список фильмов.
+     */
+    @GetMapping
+    public Collection<FilmDto> getAllFilms() {
+        log.info("Запрос на получение списка всех фильмов");
+        return FilmMapper.mapToFilmDtoCollection(this.filmService.getAllFilms());
     }
 
-    @GetMapping("/{id}")
-    public Film getFilmById(@PathVariable Long id) {
-        log.info("Запрос на получение фильма с id = {}", id);
-        return filmService.getFilmById(id);
-    }
-
-    @PutMapping("/{id}/like/{userId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void addLike(@PathVariable Long id, @PathVariable Long userId) {
-        log.info("Запрос на добавление лайка фильму с id = {} от пользователя с id = {}", id, userId);
-        filmService.addLike(id, userId);
-    }
-
-    @DeleteMapping("/{id}/like/{userId}")
-    public void deleteLike(@PathVariable Long id, @PathVariable Long userId) {
-        log.info("Запрос на удаление лайка фильму с id = {} от пользователя с id = {}", id, userId);
-        filmService.deleteLike(id, userId);
-    }
-
-    @GetMapping("/common")
-    public List<Film> getCommonFilms(@RequestParam Long userId, @RequestParam Long friendId) {
-        log.info("Запрос на получение общих фильмов для пользовтелей с id: {},{}", userId, friendId);
-        return filmService.getCommonFilm(userId, friendId);
-    }
-
+    /**
+     * Получить список популярных фильмов, отсортированный по количеству лайков.
+     *
+     * @param count   количество фильмов, которые необходимо получить.
+     * @param genreId идентификатор жанра, по которому необходимо произвести фильтрацию, если предоставлен.
+     * @param year    год выпуска фильма, по которому необходимо произвести фильтрацию, если предоставлен.
+     * @return список фильмов.
+     */
     @GetMapping("/popular")
-    public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") Long count,
-                                      @RequestParam(required = false) Integer genreId,
-                                      @RequestParam(required = false) Integer year) {
+    public Collection<FilmDto> getPopularFilms(@RequestParam(defaultValue = "10") long count,
+                                               @RequestParam(required = false) Long genreId,
+                                               @RequestParam(required = false) Integer year) {
         log.info("Запрос на получение списка из {} популярных фильмов", count);
-        return filmService.getPopularFilms(count, genreId, year);
+        return FilmMapper.mapToFilmDtoCollection(this.filmService.getPopularFilms(count, genreId, year));
     }
 
+    /**
+     * Получить фильм по его идентификатору.
+     *
+     * @param filmId идентификатор фильма.
+     * @return фильм.
+     */
+    @GetMapping("/{filmId}")
+    public FilmDto getFilmById(@PathVariable long filmId) {
+        log.info("Запрос на получение фильма с id = {}", filmId);
+        return FilmMapper.mapToFilmDto(this.filmService.getFilmById(filmId));
+    }
+
+    /**
+     * Получить список фильмов режиссёра.
+     *
+     * @param directorId идентификатор режиссёра.
+     * @param sortBy     поле, по которому необходимо отсортировать список фильмов.
+     * @return список фильмов.
+     */
     @GetMapping("/director/{directorId}")
-    public Collection<Film> getDirectorFilms(@PathVariable Integer directorId, @RequestParam String sortBy) {
-        log.info("Запрос на получение фильмов режиссёра с идентификатором {}. Сортировка по полю {}", directorId, sortBy);
-        return filmService.getDirectorFilms(directorId, sortBy);
+    public Collection<FilmDto> getDirectorFilms(@PathVariable long directorId, @RequestParam String sortBy) {
+        log.info("Запрос на получение фильмов режиссёра с id = {}. Сортировка по полю {}", directorId, sortBy);
+        return FilmMapper.mapToFilmDtoCollection(this.filmService.getDirectorFilms(directorId, sortBy));
     }
 
+    /**
+     * Получить список общих с другом фильмов.
+     *
+     * @param userId   идентификатор пользователя.
+     * @param friendId идентификатор друга.
+     * @return список фильмов.
+     */
+    @GetMapping("/common")
+    public Collection<FilmDto> getCommonFilms(@RequestParam long userId, @RequestParam long friendId) {
+        log.info("Запрос на получение общих фильмов для пользователей с id = {} и id = {}", userId, friendId);
+        return FilmMapper.mapToFilmDtoCollection(this.filmService.getCommonFilm(userId, friendId));
+    }
+
+    /**
+     * Получить список фильмов, подходящих под условие поиска.
+     *
+     * @param query поисковая строка.
+     * @param by    список полей, по которым необходимо произвести поиск.
+     * @return список фильмов.
+     */
+    @GetMapping("/search")
+    public Collection<FilmDto> searchFilms(@NotNull(message = "query не может быть пустым") @RequestParam String query, @RequestParam(required = false) String by) {
+        return FilmMapper.mapToFilmDtoCollection(filmService.searchFilms(query, by));
+    }
+
+    /**
+     * Обновить фильм.
+     *
+     * @param dto трансферный объект запроса на обновление фильма.
+     * @return фильм.
+     */
+    @PutMapping
+    public FilmDto updateFilm(@Valid @RequestBody UpdateFilmRequestDto dto) {
+        log.info("Запрос на обновление фильма с id = {}", dto.getId());
+        return FilmMapper.mapToFilmDto(this.filmService.updateFilm(FilmMapper.mapToFilm(dto)));
+    }
+
+    /**
+     * Удалить фильм.
+     *
+     * @param filmId идентификатор фильма.
+     */
     @DeleteMapping("/{filmId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteFilm(@PathVariable Long filmId) {
+    public void deleteFilm(@PathVariable long filmId) {
         log.info("Запрос на удаление фильма с id = {}", filmId);
         filmService.deleteFilm(filmId);
     }
 
-    @GetMapping("/search")
-    public List<Film> searchFilms(@NotNull(message = "query не может быть пустым") @RequestParam String query, @RequestParam(required = false) String by) {
-        return filmService.searchFilms(query, by);
+    //endregion
+
+    //region Лайки
+
+    /**
+     * Добавить фильма пользовательский лайк.
+     *
+     * @param filmId идентификатор фильма.
+     * @param userId идентификатор пользователя.
+     */
+    @PutMapping("/{filmId}/like/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void addLike(@PathVariable long filmId, @PathVariable long userId) {
+        log.info("Запрос на добавление лайка фильму с id = {} от пользователя с id = {}", filmId, userId);
+        this.filmService.addLikeToFilm(filmId, userId);
     }
+
+    /**
+     * Удалить у фильма пользовательский лайк.
+     *
+     * @param filmId идентификатор фильма.
+     * @param userId идентификатор пользователя.
+     */
+    @DeleteMapping("/{filmId}/like/{userId}")
+    public void deleteLike(@PathVariable long filmId, @PathVariable long userId) {
+        log.info("Запрос на удаление лайка фильму с id = {} от пользователя с id = {}", filmId, userId);
+        this.filmService.removeLikeFromFilm(filmId, userId);
+    }
+
+    //endregion
 }

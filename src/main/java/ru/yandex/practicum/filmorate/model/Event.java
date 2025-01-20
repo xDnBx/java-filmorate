@@ -5,25 +5,39 @@ import lombok.Data;
 
 import java.time.Instant;
 
+/**
+ * Событие.
+ */
 @Data
 @Builder
 public class Event {
-    private Integer id;
+    /**
+     * Идентификатор события.
+     */
+    private long id;
+
+    /**
+     * Дата события.
+     */
     private Instant timestamp;
-    private Integer userId;
+
+    /**
+     * Идентификатор пользователя.
+     */
+    private long userId;
+
+    /**
+     * Тип события.
+     */
     private EventType eventType;
-    private Operation operation;
-    private Integer entityId;
 
-    public enum Operation {
-        REMOVE,
-        ADD,
-        UPDATE
-    }
+    /**
+     * Тип операции.
+     */
+    private EventOperation operation;
 
-    public enum EventType {
-        LIKE,
-        REVIEW,
-        FRIEND
-    }
+    /**
+     * Идентификатор сущности, связанной с событием.
+     */
+    private long entityId;
 }

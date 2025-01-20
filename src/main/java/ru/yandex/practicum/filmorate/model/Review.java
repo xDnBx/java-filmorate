@@ -3,13 +3,39 @@ package ru.yandex.practicum.filmorate.model;
 import lombok.Builder;
 import lombok.Data;
 
+/**
+ * Отзыв.
+ */
 @Data
 @Builder
 public class Review {
-    private Integer id;
+    /**
+     * Идентификатор отзыва.
+     */
+    private long id;
+
+    /**
+     * Содержимое отзыва.
+     */
     private String content;
+
+    /**
+     * Признак является ли отзыв положительным.
+     */
     private Boolean isPositive;
-    private Integer userId;
-    private Integer filmId;
-    private Integer useful;
+
+    /**
+     * Идентификатор пользователя, оставившего отзыв.
+     */
+    private long userId;
+
+    /**
+     * Идентификатор фильма, к которому был оставлен отзыв.
+     */
+    private long filmId;
+
+    /**
+     * Рейтинг полезности отзыва.
+     */
+    private int useful;
 }

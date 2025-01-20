@@ -1,16 +1,23 @@
 package ru.yandex.practicum.filmorate.model;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
-@Data
-@Builder(toBuilder = true)
+/**
+ * Оценка Ассоциации кинокомпаний.
+ */
 @AllArgsConstructor
+@Builder(toBuilder = true)
+@Data
 public class Mpa {
-    private Integer id;
+    /**
+     * Идентификатор оценки Ассоциации кинокомпаний.
+     */
+    private long id;
 
-    @NotBlank
+    /**
+     * Название оценки Ассоциации кинокомпаний.
+     */
     private String name;
 }

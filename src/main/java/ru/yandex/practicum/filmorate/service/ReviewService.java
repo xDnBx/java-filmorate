@@ -1,210 +1,223 @@
 package ru.yandex.practicum.filmorate.service;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.dao.*;
-import ru.yandex.practicum.filmorate.dao.mappers.ReviewMapper;
-import ru.yandex.practicum.filmorate.dto.review.CreateReviewDTO;
-import ru.yandex.practicum.filmorate.dto.review.ResponseReviewDTO;
-import ru.yandex.practicum.filmorate.dto.review.UpdateReviewDTO;
-import ru.yandex.practicum.filmorate.exception.DuplicatedDataException;
-import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.*;
+import ru.yandex.practicum.filmorate.storage.EventStorage;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.ReviewStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ReviewService {
-    private final UserRepository userRepository;
-    private final FilmRepository filmRepository;
-    private final ReviewRepository reviewRepository;
-    private final ReviewRatingRepository reviewRatingRepository;
-    private final ReviewLikeRepository reviewLikeRepository;
-    private final EventRepository eventRepository;
+public final class ReviewService {
+    /**
+     * Хранилище событий.
+     */
+    private final EventStorage eventStorage;
 
-    public ResponseReviewDTO createReview(CreateReviewDTO createReviewDTO) {
-        User user = userRepository.getUserById((long) createReviewDTO.getUserId());
-        Film film = filmRepository.getFilmById((long) createReviewDTO.getFilmId());
-        Optional<Review> optionalReview = reviewRepository.findOneByUserIdAndFilmId(user.getId().intValue(), film.getId().intValue());
+    /**
+     * Хранилище фильмов.
+     */
+    private final FilmStorage filmStorage;
 
-        if (optionalReview.isPresent()) {
-            log.error("Пользователь с id={} уже создал отзыв для фильма с id={}.", optionalReview.get().getUserId(), optionalReview.get().getFilmId());
-            throw new DuplicatedDataException(String.format("Пользователь с id=%s уже создал отзыв для фильма с id=%s.",
-                    optionalReview.get().getUserId(), optionalReview.get().getFilmId()));
-        }
+    /**
+     * Хранилище отзывов.
+     */
+    private final ReviewStorage reviewStorage;
 
-        Integer reviewId = reviewRepository.insert(createReviewDTO);
+    /**
+     * Хранилище пользователей.
+     */
+    private final UserStorage userStorage;
 
-        Optional<ReviewRating> optionalReviewRating = reviewRatingRepository.findOneByReviewId(reviewId);
+    //region Отзывы
 
-        if (optionalReviewRating.isEmpty()) {
-            reviewRatingRepository.insert(reviewId, 0);
-        }
+    /**
+     * Создать новый отзыв.
+     *
+     * @param review отзыв.
+     * @return отзыв.
+     */
+    public Review createReview(Review review) {
+        throwIfUserNotFound(review.getUserId());
+        throwIfFilmNotFound(review.getFilmId());
+        log.debug("Добавление нового отзыва от пользователя с id = {} к фильму с id = {}", review.getUserId(), review.getFilmId());
 
-        Review review = reviewRepository.findOneById(reviewId).orElseThrow(() -> {
-            log.error("Отзыв с id={} не найден.", reviewId);
-            return new NotFoundException(String.format("Отзыв с id=%s не найден.", reviewId));
-        });
+        Review created = this.reviewStorage.createReview(review);
+        this.eventStorage.createEvent(created.getUserId(), EventType.REVIEW, EventOperation.ADD, created.getId());
 
-        eventRepository.insert(review.getUserId(), Event.EventType.REVIEW, Event.Operation.ADD, review.getId());
-        return ReviewMapper.mapToResponseReviewDTO(review);
+        return created;
     }
 
-    public ResponseReviewDTO updateReview(@Valid UpdateReviewDTO updateReviewDTO) {
-        if (updateReviewDTO.getUserId() == 2) {
-            updateReviewDTO.setUserId(1);
-        }
-
-        if (updateReviewDTO.getFilmId() == 2) {
-            updateReviewDTO.setFilmId(1);
-        }
-
-        User user = userRepository.getUserById((long) updateReviewDTO.getUserId());
-        Film film = filmRepository.getFilmById((long) updateReviewDTO.getFilmId());
-        Review review = reviewRepository.findOneByUserIdAndFilmId(user.getId().intValue(), film.getId().intValue())
-                .orElseThrow(() -> {
-                    log.error("Отзыв не найден для фильма с id={} и пользователем с id={}.", film.getId(), user.getId());
-                    return new NotFoundException(String.format("Отзыв не найден для фильма с id=%s и пользователем с id=%s.",
-                            film.getId(), user.getId()));
-                });
-        reviewRatingRepository.findOneByReviewId(review.getId())
-                .orElseThrow(() -> {
-                    log.error("Рейтинг отзыва с id={} не найден.", review.getId());
-                    return new NotFoundException(String.format("Рейтинг отзыва с id=%s не найден.", review.getId()));
-                });
-
-        if (updateReviewDTO.getContent() != null && !updateReviewDTO.getContent().trim().isEmpty()) {
-            review.setContent(updateReviewDTO.getContent());
-        }
-
-        if (!review.getIsPositive().equals(updateReviewDTO.getIsPositive())) {
-            if (updateReviewDTO.getIsPositive() != null) {
-                review.setIsPositive(updateReviewDTO.getIsPositive());
-            }
-        }
-
-        reviewRepository.update(review);
-        eventRepository.insert(review.getUserId(), Event.EventType.REVIEW, Event.Operation.UPDATE, review.getId());
-        return ReviewMapper.mapToResponseReviewDTO(review);
+    /**
+     * Получить список отзывов.
+     *
+     * @param count количество отзывов, которое необходимо получить.
+     * @return список отзывов.
+     */
+    public Collection<Review> getReviews(int count) {
+        log.debug("Получение {} отзывов", count);
+        return this.reviewStorage.getReviews(count);
     }
 
-    public ResponseReviewDTO deleteReview(Integer id) {
-        Review review = reviewRepository.findOneById(id).orElseThrow(() -> {
-                    log.error("Отзыв с id={} не найден.", id);
-                    return new NotFoundException(String.format("Отзыв с id=%s не найден.", id));
-                }
-        );
-        reviewRepository.delete(id);
-        eventRepository.insert(review.getUserId(), Event.EventType.REVIEW, Event.Operation.REMOVE, review.getId());
-        return ReviewMapper.mapToResponseReviewDTO(review);
+    /**
+     * Получить список отзывов к фильму.
+     *
+     * @param filmId идентификатор фильма.
+     * @param count  количество отзывов, которое необходимо получить.
+     * @return список отзывов.
+     */
+    public Collection<Review> getFilmReviews(long filmId, int count) {
+        throwIfFilmNotFound(filmId);
+        log.debug("Получение {} отзывов к фильму с id = {}", count, filmId);
+
+        return this.reviewStorage.getFilmReviews(filmId, count);
     }
 
-    public ResponseReviewDTO getReview(Integer id) {
-        Review review = reviewRepository.findOneById(id).orElseThrow(() -> {
-                    log.error("Отзыв с id={} не найден.", id);
-                    return new NotFoundException(String.format("Отзыв с id=%s не найден.", id));
-                }
-        );
-        return ReviewMapper.mapToResponseReviewDTO(review);
-    }
+    /**
+     * Получить отзыв по его идентификатору.
+     *
+     * @param reviewId идентификатор отзыва.
+     * @return отзыв
+     */
+    public Review getReviewById(long reviewId) {
+        log.debug("Получение отзыва с id = {}", reviewId);
 
-    public List<ResponseReviewDTO> getReviews(Integer filmId, Integer count) {
-        int i = count == null || count < 0 ? 10 : count;
-
-        if (filmId == null) {
-            return ReviewMapper.mapToResponseReviewDTOList(reviewRepository.findAll(i));
-        } else {
-            return ReviewMapper.mapToResponseReviewDTOList(reviewRepository.findAllByFilmId(filmId, i));
+        Optional<Review> reviewOptional = this.reviewStorage.getReviewById(reviewId);
+        if (reviewOptional.isEmpty()) {
+            throw new NotFoundException(String.format("Отзыв с id = %d не найден", reviewId));
         }
+
+        return reviewOptional.get();
     }
 
-    public ResponseReviewDTO addLike(Integer id, Integer userId) {
-        Review review = reviewRepository.findOneById(id).orElseThrow(() -> {
-            log.error("Отзыв с id={} не найден.", id);
-            return new NotFoundException(String.format("Отзыв с id=%s не найден.", id));
-        });
-        userRepository.getUserById(userId.longValue());
+    /**
+     * Обновить отзыв.
+     *
+     * @param review отзыв.
+     * @return отзыв.
+     */
+    public Review updateReview(Review review) {
+        throwIfReviewNotFound(review.getId());
+        throwIfUserNotFound(review.getUserId());
+        throwIfFilmNotFound(review.getFilmId());
+        log.debug("Обновление отзыва с id = {}", review.getId());
 
-        Optional<ReviewLike> optionalReviewLike = reviewLikeRepository.findOneByReviewIdAndUserId(id, userId);
+        this.reviewStorage.updateReview(review);
 
-        if (optionalReviewLike.isPresent()) {
-            if (optionalReviewLike.get().getIsLiked()) {
-                return ReviewMapper.mapToResponseReviewDTO(review);
+        Review updatedReview = this.getReviewById(review.getId());
+        this.eventStorage.createEvent(updatedReview.getUserId(), EventType.REVIEW, EventOperation.UPDATE, updatedReview.getId());
+
+        return updatedReview;
+    }
+
+    /**
+     * Удалить отзыв.
+     *
+     * @param reviewId идентификатор отзыва.
+     */
+    public void deleteReview(long reviewId) {
+        throwIfReviewNotFound(reviewId);
+        log.debug("Удаление отзыва с id = {}", reviewId);
+
+        Review review = this.getReviewById(reviewId);
+
+        this.reviewStorage.deleteReview(reviewId);
+        this.eventStorage.createEvent(review.getUserId(), EventType.REVIEW, EventOperation.REMOVE, reviewId);
+    }
+
+    //endregion
+
+    //region Лайки
+
+    /**
+     * Добавить лайк к отзыву.
+     *
+     * @param reviewId идентификатор отзыва.
+     * @param userId   идентификатор пользователя.
+     * @param isLiked  признак, нравится ли пользователю отзыв.
+     */
+    public void addLikeToReview(long reviewId, long userId, boolean isLiked) {
+        throwIfReviewNotFound(reviewId);
+        throwIfUserNotFound(userId);
+
+        if (!this.reviewStorage.isLikeForReviewExist(reviewId, userId)) {
+            if (isLiked) {
+                log.debug("Добавление лайка от пользователя с id = {} к отзыву с id = {}", userId, reviewId);
             } else {
-                reviewLikeRepository.update(true, id, userId);
-                reviewRatingRepository.update(review.getId(), review.getUseful() + 1);
+                log.debug("Добавление дизлайка от пользователя с id = {} к отзыву с id = {}", userId, reviewId);
             }
-        } else {
-            reviewLikeRepository.insert(id, userId, true);
-            reviewRatingRepository.update(review.getId(), review.getUseful() + 1);
+
+            this.reviewStorage.addLikeToReview(reviewId, userId, isLiked);
+            return;
         }
 
-        Review review1 = reviewRepository.findOneById(id).orElseThrow(() -> {
-            log.error("Произошла ошибка при поиске отзыва.");
-            return new InternalServerException("Произошла ошибка при поиске отзыва.");
-        });
-        return ReviewMapper.mapToResponseReviewDTO(review1);
-    }
-
-    public ResponseReviewDTO addDislike(Integer id, Integer userId) {
-        Review review = reviewRepository.findOneById(id).orElseThrow(() -> {
-            log.error("Отзыв с id={} не найден.", id);
-            return new NotFoundException(String.format("Отзыв с id=%s не найден.", id));
-        });
-        userRepository.getUserById(userId.longValue());
-
-        Optional<ReviewLike> optionalReviewLike = reviewLikeRepository.findOneByReviewIdAndUserId(id, userId);
-
-        if (optionalReviewLike.isPresent()) {
-            if (!optionalReviewLike.get().getIsLiked()) {
-                return ReviewMapper.mapToResponseReviewDTO(review);
-            } else {
-                reviewLikeRepository.update(false, id, userId);
-                reviewRatingRepository.update(review.getId(), review.getUseful() - 2);
-            }
+        if (isLiked) {
+            log.debug("Смена дизлайка на лайк от пользователя с id = {} к отзыву с id = {}", userId, reviewId);
         } else {
-            reviewLikeRepository.insert(id, userId, false);
-            reviewRatingRepository.update(review.getId(), review.getUseful() - 1);
+            log.debug("Смена лайка на дизлайк от пользователя с id = {} к отзыву с id = {}", userId, reviewId);
         }
 
-        Review review1 = reviewRepository.findOneById(id).orElseThrow(() -> {
-            log.error("Произошла ошибка при поиске отзыва.");
-            return new InternalServerException("Произошла ошибка при поиске отзыва.");
-        });
-        return ReviewMapper.mapToResponseReviewDTO(review1);
+        this.reviewStorage.updateLikeForReview(reviewId, userId, isLiked);
     }
 
-    public ResponseReviewDTO deleteLike(Integer id, Integer userId) {
-        Review review = reviewRepository.findOneById(id).orElseThrow(() -> {
-            log.error("Отзыв с id={} не найден.", id);
-            return new NotFoundException(String.format("Отзыв с id=%s не найден.", id));
-        });
-        userRepository.getUserById(userId.longValue());
+    /**
+     * Удалить лайк у отзыва.
+     *
+     * @param reviewId  идентификатор отзыва.
+     * @param userId    идентификатор пользователя.
+     */
+    public void removeLikeFromReview(long reviewId, long userId) {
+        throwIfReviewNotFound(reviewId);
+        throwIfUserNotFound(userId);
+        log.debug("Удаления лайка от пользователя с id = {} у отзыва с id = {}", userId, reviewId);
 
-        Optional<ReviewLike> optionalReviewLike = reviewLikeRepository.findOneByReviewIdAndUserId(id, userId);
+        this.reviewStorage.removeLikeFromReview(reviewId, userId);
+    }
 
-        if (optionalReviewLike.isPresent()) {
-            if (optionalReviewLike.get().getIsLiked() == null) {
-                return ReviewMapper.mapToResponseReviewDTO(review);
-            } else {
-                reviewLikeRepository.update(null, id, userId);
-                reviewRatingRepository.update(review.getId(), review.getUseful() - 1);
-            }
-        } else {
-            reviewLikeRepository.insert(id, userId, null);
-            reviewRatingRepository.update(review.getId(), review.getUseful() - 1);
+    //endregion
+
+    //region Facilities
+
+    /**
+     * Выбросить исключение, если фильм не найден.
+     *
+     * @param filmId идентификатор фильма.
+     */
+    private void throwIfFilmNotFound(long filmId) {
+        if (this.filmStorage.getFilmById(filmId).isEmpty()) {
+            throw new NotFoundException(String.format("Фильм с id = %d не найден", filmId));
         }
-
-        Review review1 = reviewRepository.findOneById(id).orElseThrow(() -> {
-            log.error("Произошла ошибка при поиске отзыва.");
-            return new InternalServerException("Произошла ошибка при поиске отзыва.");
-        });
-        return ReviewMapper.mapToResponseReviewDTO(review1);
     }
+
+    /**
+     * Выбросить исключение, если отзыв не найден.
+     *
+     * @param reviewId идентификатор отзыва.
+     */
+    private void throwIfReviewNotFound(long reviewId) {
+        if (this.reviewStorage.getReviewById(reviewId).isEmpty()) {
+            throw new NotFoundException(String.format("Отзыв с id = %d не найден", reviewId));
+        }
+    }
+
+    /**
+     * Выбросить исключение, если пользователей не найден.
+     *
+     * @param userId идентификатор пользователя.
+     */
+    private void throwIfUserNotFound(long userId) {
+        if (this.userStorage.getUserById(userId).isEmpty()) {
+            throw new NotFoundException(String.format("Пользователь с id = %d не найден", userId));
+        }
+    }
+
+    //endregion
 }

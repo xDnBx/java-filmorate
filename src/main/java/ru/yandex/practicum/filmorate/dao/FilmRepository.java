@@ -253,6 +253,7 @@ public class FilmRepository implements FilmStorage {
         try {
             List<Film> films = jdbc.query(GET_COMMON_FILMS, FilmMapper::mapToFilm, userId1, userId2);
             films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
+            films.forEach(film -> film.setDirectors(getFilmDirectors(film.getId())));
             return films;
         } catch (Exception e) {
             log.error("Ошибка при получении списка общих фильмов пользователей: {}, {}", userId1, userId2);
@@ -264,36 +265,24 @@ public class FilmRepository implements FilmStorage {
     public List<Film> getPopularFilms(Long count, Integer genreId, Integer year) {
         String insert = "";
         if (genreId != null && year == null) {
-            insert = "JOIN films_genres AS fg ON f.id = fg.film_id WHERE fg.genre_id = " + genreId;
+            insert = "LEFT JOIN films_genres AS fg ON f.id = fg.film_id WHERE fg.genre_id = " + genreId;
         }
         if (genreId == null && year != null) {
             insert = "WHERE YEAR(f.release_date) = " + year;
         }
         if (genreId != null && year != null) {
-            insert = "JOIN films_genres AS fg ON f.id = fg.film_id WHERE fg.genre_id = " + genreId +
+            insert = "LEFT JOIN films_genres AS fg ON f.id = fg.film_id WHERE fg.genre_id = " + genreId +
                     " AND YEAR(f.release_date) = " + year;
         }
 
         String getPopularQuery = "SELECT f.id, f.name, f.description, f.release_date, f.duration, m.id AS mpa_id," +
                 " m.name AS mpa_name FROM films AS f" +
-                " JOIN likes AS l ON l.film_id = f.id JOIN mpa AS m ON f.mpa_id = m.id " + insert +
+                " LEFT JOIN likes AS l ON l.film_id = f.id LEFT JOIN mpa AS m ON f.mpa_id = m.id " + insert +
                 " GROUP BY f.id ORDER BY COUNT(l.user_id) DESC LIMIT ?";
-
-        List<Film> allFilms = getAllFilms().stream().toList();
 
         try {
             List<Film> films = jdbc.query(getPopularQuery, FilmMapper::mapToFilm, count);
             films.forEach(film -> film.setGenres(getFilmGenres(film.getId())));
-            if (count > films.size()) {
-                for (Film film : allFilms) {
-                    if (!films.contains(film)) {
-                        films.add(film);
-                    }
-                    if (count == films.size()) {
-                        return films;
-                    }
-                }
-            }
             films.forEach(film -> film.setDirectors(getFilmDirectors(film.getId())));
             return films;
         } catch (Exception e) {

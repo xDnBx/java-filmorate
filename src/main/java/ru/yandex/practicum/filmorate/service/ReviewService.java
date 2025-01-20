@@ -166,7 +166,7 @@ public class ReviewService {
                 return ReviewMapper.mapToResponseReviewDTO(review);
             } else {
                 reviewLikeRepository.update(false, id, userId);
-                reviewRatingRepository.update(review.getId(), review.getUseful() - 1);
+                reviewRatingRepository.update(review.getId(), review.getUseful() - 2);
             }
         } else {
             reviewLikeRepository.insert(id, userId, false);

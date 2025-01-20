@@ -85,7 +85,7 @@ public class UserRepository implements UserStorage {
     public User createUser(User user) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         String name = user.getName();
-        if(name==null||name.isBlank()||name.isEmpty()){
+        if (name == null || name.isBlank() || name.isEmpty()) {
             user.setName(user.getLogin());
         }
         try {
@@ -112,7 +112,7 @@ public class UserRepository implements UserStorage {
     public User updateUser(User newUser) {
         getUserById(newUser.getId());
         String name = newUser.getName();
-        if(name==null||name.isBlank()||name.isEmpty()){
+        if (name == null || name.isBlank() || name.isEmpty()) {
             newUser.setName(newUser.getLogin());
         }
         try {

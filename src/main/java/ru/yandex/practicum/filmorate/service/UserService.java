@@ -30,7 +30,7 @@ public class UserService {
 
     public User createUser(User user) {
         log.info("Добавление нового пользователя: {}", user.getLogin());
-        if (user.getName() == null) {
+        if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
         return userStorage.createUser(user);
@@ -38,7 +38,7 @@ public class UserService {
 
     public User updateUser(User newUser) {
         log.info("Обновление пользователя с id = {}", newUser.getId());
-        if (newUser.getName() == null) {
+        if (newUser.getName() == null || newUser.getName().isBlank()) {
             newUser.setName(newUser.getLogin());
         }
         return userStorage.updateUser(newUser);

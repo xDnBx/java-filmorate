@@ -2,18 +2,18 @@ package ru.yandex.practicum.filmorate.dao.mappers;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.model.FilmRating;
+import ru.yandex.practicum.filmorate.model.ReviewRating;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class FilmRatingRowMapper implements RowMapper<FilmRating> {
+public class ReviewRatingRowMapper implements RowMapper<ReviewRating> {
     @Override
-    public FilmRating mapRow(ResultSet rs, int rowNum) throws SQLException {
-        return FilmRating.builder()
+    public ReviewRating mapRow(ResultSet rs, int rowNum) throws SQLException {
+        return ReviewRating.builder()
                 .id(rs.getInt("id"))
-                .filmId(rs.getInt("film_id"))
+                .reviewId(rs.getInt("review_id"))
                 .rating(rs.getInt("rating"))
                 .build();
     }

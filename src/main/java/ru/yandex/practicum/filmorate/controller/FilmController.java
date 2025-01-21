@@ -52,7 +52,6 @@ public class FilmController {
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteLike(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Запрос на удаление лайка фильму с id = {} от пользователя с id = {}", id, userId);
         filmService.deleteLike(id, userId);

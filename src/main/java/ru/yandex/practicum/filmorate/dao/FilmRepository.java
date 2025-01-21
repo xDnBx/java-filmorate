@@ -125,7 +125,6 @@ public class FilmRepository implements FilmStorage {
     private static final String DELETE_GENRES_QUERY = "DELETE FROM films_genres WHERE film_id = ?";
     private static final String DELETE_FILM_LIKE_QUERY = "DELETE FROM likes WHERE film_id = ?";
     private static final String DELETE_REVIEWS_QUERY = "DELETE FROM reviews WHERE film_id = ?";
-    private static final String DELETE_FILMS_RATING_QUERY = "DELETE FROM films_rating WHERE film_id = ?";
     private static final String DELETE_QUERY = "DELETE FROM films WHERE id = ?";
 
     private static final String ADD_DIRECTOR_TO_FILM_QUERY = "INSERT INTO films_directors (film_id, director_id) VALUES (?, ?)";
@@ -319,7 +318,6 @@ public class FilmRepository implements FilmStorage {
             jdbc.update(DELETE_GENRES_QUERY, filmId);
             jdbc.update(DELETE_FILM_LIKE_QUERY, filmId);
             jdbc.update(DELETE_REVIEWS_QUERY, filmId);
-            jdbc.update(DELETE_FILMS_RATING_QUERY, filmId);
             jdbc.update(DELETE_QUERY, filmId);
             log.info("Фильм с id = {} удален", filmId);
         } catch (Exception e) {
@@ -468,6 +466,4 @@ public class FilmRepository implements FilmStorage {
             throw new InternalServerException("Ошибка при проверке лайка пользователя");
         }
     }
-
-
 }

@@ -1,45 +1,57 @@
 package ru.yandex.practicum.filmorate.model;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
-import lombok.*;
-import ru.yandex.practicum.filmorate.validation.ReleaseDate;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
+/**
+ * Фильм.
+ */
 @Data
 @Builder(toBuilder = true)
-@AllArgsConstructor
-@NoArgsConstructor
-@EqualsAndHashCode(exclude = {"mpa", "genres", "likes"})
+@EqualsAndHashCode(exclude = {"mpa", "genres"})
 public class Film {
-    private Long id;
+    /**
+     * Идентификатор фильма.
+     */
+    private long id;
 
-    @NotBlank(message = "Название не может быть пустым")
+    /**
+     * Название фильма.
+     */
     private String name;
 
-    @NotNull
-    @Size(max = 200, message = "Максимальная длина описания 200 символов")
+    /**
+     * Описание фильма.
+     */
     private String description;
 
-    @ReleaseDate
+    /**
+     * Дата релиза.
+     */
     private LocalDate releaseDate;
 
-    @Positive(message = "Продолжительность должна быть больше нуля")
-    private Integer duration;
+    /**
+     * Продолжительность фильма в минутах.
+     */
+    private int duration;
 
-    @NotNull
+    /**
+     * Оценка Ассоциации кинокомпаний.
+     */
     private Mpa mpa;
 
-    private LinkedHashSet<Genre> genres = new LinkedHashSet<>();
+    /**
+     * Список режиссёров фильма.
+     */
+    private Collection<Genre> genres = new HashSet<>();
 
+    /**
+     * Список жанров фильма.
+     */
     private Collection<Director> directors = new HashSet<>();
-
-    private Set<Long> likes = new HashSet<>();
 }

@@ -3,19 +3,46 @@ package ru.yandex.practicum.filmorate.storage;
 import ru.yandex.practicum.filmorate.model.Director;
 
 import java.util.Collection;
+import java.util.Optional;
 
+/**
+ * Контракт хранилища режиссёров.
+ */
 public interface DirectorStorage {
-
+    /**
+     * Создать нового режиссёра.
+     *
+     * @param director режиссёр.
+     * @return режиссёр.
+     */
     Director createDirector(Director director);
 
+    /**
+     * Получить список всех режиссёров.
+     *
+     * @return список режиссёров.
+     */
     Collection<Director> getAllDirectors();
 
-    Director getDirectorById(Integer directorId);
+    /**
+     * Получить режиссёра по его идентификатору.
+     *
+     * @param directorId идентификатор режиссёра.
+     * @return режиссёр.
+     */
+    Optional<Director> getDirectorById(long directorId);
 
-    Director updateDirector(Director newDirector);
+    /**
+     * Обновить режиссёра.
+     *
+     * @param director режиссёр.
+     */
+    void updateDirector(Director director);
 
-    void deleteDirector(Integer directorId);
-
-    Collection<Director> getDirectorByFilmId(Long id);
-
+    /**
+     * Удалить режиссёра.
+     *
+     * @param directorId идентификатор режиссёра.
+     */
+    void deleteDirector(long directorId);
 }

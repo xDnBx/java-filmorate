@@ -9,6 +9,11 @@ import lombok.Data;
 @Builder(toBuilder = true)
 @Data
 public class Director {
+    public Director(long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
     /**
      * Идентификатор режиссёра.
      */

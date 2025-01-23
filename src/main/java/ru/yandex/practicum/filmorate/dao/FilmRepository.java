@@ -14,10 +14,7 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Хранилище фильмов, основанное на БД.
@@ -195,16 +192,52 @@ public class FilmRepository extends BaseRepository implements FilmStorage {
     public Collection<Film> getCommonFilms(long userId, long friendId) {
         try {
             Collection<Film> films = this.findMany(FilmQueries.GET_COMMON_FILMS_QUERY, FilmMapper::mapToFilm, userId, friendId);
-
-            films.forEach(film -> {
-                film.setDirectors(this.getFilmDirectors(film.getId()));
-                film.setGenres(this.getFilmGenres(film.getId()));
-            });
-
+            addFilmGenresDirectors(films);
             return films;
         } catch (Throwable ex) {
             log.error("Ошибка при получении списка общих фильмов пользователей с идентификаторами {}, {}: [{}] {}", userId, friendId, ex.getClass().getSimpleName(), ex.getMessage());
             throw new InternalServerException();
+        }
+    }
+
+    /**
+     * Добавить режисёров и жанры к фильмам
+     *
+     * @param films список фильмов для добавления
+     */
+    private void addFilmGenresDirectors(Collection<Film> films) {
+        List<Long> filmIds = films.stream().map(Film::getId).toList();
+        StringBuilder answer = new StringBuilder("( ");
+        for (Long id : filmIds) {
+            answer.append(id);
+        }
+        answer.append(" )");
+        List<Map<String, Object>> genres = jdbc.queryForList(FilmQueries.GET_FILMS_GENRES_QUERY + answer);
+        List<Map<String, Object>> directors = jdbc.queryForList(FilmQueries.GET_FILMS_DIRECTORS_QUERY + answer);
+
+        Map<Long, List<Genre>> genresByFilmId = new HashMap<>();
+        for (Map<String, Object> row : genres) {
+            Long filmId = (Long) row.get("film_id");
+            Long genreId = (Long) row.get("genre_id");
+            String genreName = (String) row.get("genre_name");
+            Genre genre = new Genre(genreId, genreName);
+            genresByFilmId.computeIfAbsent(filmId, k -> new ArrayList<>()).add(genre);
+        }
+
+        Map<Long, List<Director>> directorsByFilmId = new HashMap<>();
+        for (Map<String, Object> row : directors) {
+            Long filmId = (Long) row.get("film_id");
+            Long genreId = (Long) row.get("director_id");
+            String genreName = (String) row.get("director_name");
+            Director director = new Director(genreId, genreName);
+            directorsByFilmId.computeIfAbsent(filmId, k -> new ArrayList<>()).add(director);
+        }
+
+        for (Film film : films) {
+            List<Genre> filmGenres = genresByFilmId.getOrDefault(film.getId(), Collections.emptyList());
+            film.setGenres(filmGenres);
+            List<Director> filmDirectors = directorsByFilmId.getOrDefault(film.getId(), Collections.emptyList());
+            film.setDirectors(filmDirectors);
         }
     }
 

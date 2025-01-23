@@ -300,7 +300,7 @@ public final class FilmQueries {
                             directors d
                        JOIN film_directors fd ON fd.director_id = d.id
                     WHERE
-                            fd.film_id IN 
+                            fd.film_id IN
                     """;
 
     /**
@@ -356,7 +356,7 @@ public final class FilmQueries {
                             film_genres fg
                        JOIN genres g ON g.id = fg.genre_id
                     WHERE
-                            fg.film_id IN 
+                            fg.film_id IN
                     """;
 
     /**

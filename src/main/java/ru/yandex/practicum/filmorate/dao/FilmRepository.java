@@ -207,7 +207,7 @@ public class FilmRepository extends BaseRepository implements FilmStorage {
      */
     private void addFilmGenresDirectors(Collection<Film> films) {
         List<Long> filmIds = films.stream().map(Film::getId).toList();
-        StringBuilder answer = new StringBuilder("( ");
+        StringBuilder answer = new StringBuilder(" ( ");
         for (Long id : filmIds) {
             answer.append(id);
         }

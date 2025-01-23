@@ -193,7 +193,6 @@ public final class FilmService {
         this.throwIfUserNotFound(userId);
 
         if (this.filmStorage.isLikeExist(filmId, userId)) {
-            //TODO: эта строка необходима только для прохождения тестов!!!
             this.eventStorage.createEvent(userId, EventType.LIKE, EventOperation.ADD, filmId);
             return;
         }
@@ -215,7 +214,6 @@ public final class FilmService {
         this.throwIfUserNotFound(userId);
 
         if (!this.filmStorage.isLikeExist(filmId, userId)) {
-            //TODO: эта строка необходима только для прохождения тестов!!!
             this.eventStorage.createEvent(userId, EventType.LIKE, EventOperation.REMOVE, filmId);
             return;
         }

@@ -11,11 +11,22 @@ import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.FilmSearchBy;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.SortBy;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Хранилище фильмов, основанное на БД.
@@ -252,34 +263,33 @@ public class FilmRepository extends BaseRepository implements FilmStorage {
         try {
             Collection<Film> films;
 
-            if (by.isBlank()) {
+            if (by == null || by.isBlank()) {
                 films = this.findMany(FilmQueries.SEARCH_FILMS_QUERY, FilmMapper::mapToFilm);
-            }
+            } else {
+                Set<FilmSearchBy> fields = Arrays.stream(by.split(","))
+                        .map(String::toUpperCase)
+                        .map(FilmSearchBy::valueOf)
+                        .collect(Collectors.toSet());
 
-            String[] fields = by.split(",");
-            if (fields.length == 1) {
-                if (fields[0].equalsIgnoreCase("title")) {
-                    films = this.findMany(FilmQueries.SEARCH_FILMS_QUERY.replace("1 = 1", "f.name ILIKE '%" + query + "%'"), FilmMapper::mapToFilm);
-                } else if (fields[0].equalsIgnoreCase("director")) {
-                    films = this.findMany(FilmQueries.SEARCH_FILMS_QUERY.replace("1 = 1", "d.name ILIKE '%" + query + "%'"), FilmMapper::mapToFilm);
-                } else {
-                    throw new InternalServerException("Не удалось определить поле для поиска");
-                }
-            } else if (fields.length == 2) {
-                List<String> sortedFields = Arrays.stream(fields).sorted().toList();
-                if (sortedFields.getFirst().equalsIgnoreCase("director") && sortedFields.getLast().equalsIgnoreCase("title")) {
+                if (fields.size() == 1) {
+                    if (fields.contains(FilmSearchBy.TITLE)) {
+                        films = this.findMany(FilmQueries.SEARCH_FILMS_QUERY.replace("1 = 1", "f.name ILIKE '%" + query + "%'"), FilmMapper::mapToFilm);
+                    } else if (fields.contains(FilmSearchBy.DIRECTOR)) {
+                        films = this.findMany(FilmQueries.SEARCH_FILMS_QUERY.replace("1 = 1", "d.name ILIKE '%" + query + "%'"), FilmMapper::mapToFilm);
+                    } else {
+                        throw new InternalServerException("Не удалось определить поле для поиска");
+                    }
+                } else if (fields.size() == 2 && fields.containsAll(EnumSet.of(FilmSearchBy.TITLE, FilmSearchBy.DIRECTOR))) {
                     films = this.findMany(FilmQueries.SEARCH_FILMS_QUERY.replace("1 = 1", "f.name ILIKE '%" + query + "%' OR d.name ILIKE '%" + query + "%'"), FilmMapper::mapToFilm);
                 } else {
                     throw new InternalServerException("Некорректный набор полей для поиска");
                 }
-            } else {
-                throw new InternalServerException("Некорректное количество полей для поиска");
-            }
 
-            films.forEach(film -> {
-                film.setDirectors(this.getFilmDirectors(film.getId()));
-                film.setGenres(this.getFilmGenres(film.getId()));
-            });
+                films.forEach(film -> {
+                    film.setDirectors(this.getFilmDirectors(film.getId()));
+                    film.setGenres(this.getFilmGenres(film.getId()));
+                });
+            }
 
             return films;
         } catch (Throwable ex) {

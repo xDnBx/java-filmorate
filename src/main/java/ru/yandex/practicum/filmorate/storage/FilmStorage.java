@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.storage;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.SortBy;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -62,7 +63,7 @@ public interface FilmStorage {
      * @param sortBy     поле, по которому необходимо отсортировать список фильмов.
      * @return список фильмов.
      */
-    Collection<Film> getDirectorFilms(long directorId, String sortBy);
+    Collection<Film> getDirectorFilms(long directorId, SortBy sortBy);
 
     /**
      * Получить список общих с другом фильмов.

@@ -55,7 +55,7 @@ public final class DirectorController {
      * @return режиссёр.
      */
     @GetMapping("/{directorId}")
-    public DirectorDto getDirectorById(@PathVariable Integer directorId) {
+    public DirectorDto getDirectorById(@PathVariable long directorId) {
         log.info("Запрос на получение режиссёра с id = {}", directorId);
         return DirectorMapper.mapToDirectorDto(this.directorService.getDirectorById(directorId));
     }
@@ -78,7 +78,7 @@ public final class DirectorController {
      * @param directorId идентификатор режиссёра.
      */
     @DeleteMapping("/{directorId}")
-    public void deleteDirector(@PathVariable Integer directorId) {
+    public void deleteDirector(@PathVariable long directorId) {
         log.info("Запрос на удаление режиссёра с id = {}", directorId);
         this.directorService.deleteDirector(directorId);
     }

@@ -7,6 +7,7 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.EventOperation;
 import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.SortBy;
 import ru.yandex.practicum.filmorate.storage.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.EventStorage;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
@@ -119,7 +120,7 @@ public final class FilmService {
      * @param sortBy     поле, по которому необходимо отсортировать список фильмов.
      * @return список фильмов.
      */
-    public Collection<Film> getDirectorFilms(long directorId, String sortBy) {
+    public Collection<Film> getDirectorFilms(long directorId, SortBy sortBy) {
         throwIfDirectorNotFound(directorId);
         log.debug("Получение фильмов режиссёра с id = {}. Сортировка по полю {}", directorId, sortBy);
 

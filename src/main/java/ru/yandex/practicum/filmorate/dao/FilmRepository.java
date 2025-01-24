@@ -12,6 +12,7 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.SortBy;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.util.*;
@@ -156,15 +157,13 @@ public class FilmRepository extends BaseRepository implements FilmStorage {
      * @return список фильмов.
      */
     @Override
-    public Collection<Film> getDirectorFilms(long directorId, String sortBy) {
+    public Collection<Film> getDirectorFilms(long directorId, SortBy sortBy) {
         try {
             String query;
-            if (sortBy.equalsIgnoreCase("likes")) {
-                query = FilmQueries.GET_DIRECTOR_FILMS_SORTED_BY_LIKES_QUERY;
-            } else if (sortBy.equalsIgnoreCase("year")) {
-                query = FilmQueries.GET_DIRECTOR_FILMS_SORTED_BY_YEARS_QUERY;
-            } else {
-                throw new NotFoundException(String.format("Запрос для сортировки по %s не найден", sortBy));
+            switch (sortBy) {
+                case LIKES -> query = FilmQueries.GET_DIRECTOR_FILMS_SORTED_BY_LIKES_QUERY;
+                case YEAR -> query = FilmQueries.GET_DIRECTOR_FILMS_SORTED_BY_YEARS_QUERY;
+                default -> throw new NotFoundException(String.format("Запрос для сортировки по %s не найден", sortBy));
             }
 
             Collection<Film> films = this.findMany(query, FilmMapper::mapToFilm, directorId);

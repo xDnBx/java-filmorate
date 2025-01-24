@@ -10,6 +10,7 @@ import ru.yandex.practicum.filmorate.dto.film.CreateFilmRequestDto;
 import ru.yandex.practicum.filmorate.dto.film.FilmDto;
 import ru.yandex.practicum.filmorate.dto.film.UpdateFilmRequestDto;
 import ru.yandex.practicum.filmorate.mapper.FilmMapper;
+import ru.yandex.practicum.filmorate.model.SortBy;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.Collection;
@@ -89,7 +90,7 @@ public final class FilmController {
      * @return список фильмов.
      */
     @GetMapping("/director/{directorId}")
-    public Collection<FilmDto> getDirectorFilms(@PathVariable long directorId, @RequestParam String sortBy) {
+    public Collection<FilmDto> getDirectorFilms(@PathVariable long directorId, @RequestParam SortBy sortBy) {
         log.info("Запрос на получение фильмов режиссёра с id = {}. Сортировка по полю {}", directorId, sortBy);
         return FilmMapper.mapToFilmDtoCollection(this.filmService.getDirectorFilms(directorId, sortBy));
     }

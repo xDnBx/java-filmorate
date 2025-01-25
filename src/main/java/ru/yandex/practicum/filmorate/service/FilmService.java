@@ -3,85 +3,264 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.model.EventOperation;
+import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.model.Mpa;
+import ru.yandex.practicum.filmorate.model.SortBy;
+import ru.yandex.practicum.filmorate.storage.DirectorStorage;
+import ru.yandex.practicum.filmorate.storage.EventStorage;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.GenreStorage;
-import ru.yandex.practicum.filmorate.storage.MpaStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Optional;
 
-@Slf4j
-@Service
+/**
+ * Сервис для работы с фильмами.
+ */
 @RequiredArgsConstructor
-public class FilmService {
+@Service
+@Slf4j
+public final class FilmService {
+    /**
+     * Хранилище режиссёров.
+     */
+    private final DirectorStorage directorStorage;
+
+    /**
+     * Хранилище событий.
+     */
+    private final EventStorage eventStorage;
+
+    /**
+     * Хранилище фильмов.
+     */
     private final FilmStorage filmStorage;
-    private final MpaStorage mpaStorage;
-    private final GenreStorage genreStorage;
+
+    /**
+     * Хранилище пользователей.
+     */
     private final UserStorage userStorage;
 
-    public Collection<Film> getAllFilms() {
-        log.info("Получение списка всех фильмов");
-        return filmStorage.getAllFilms();
-    }
+    //region Фильмы
 
+    /**
+     * Создать новый фильм.
+     *
+     * @param film фильм.
+     * @return фильм.
+     */
     public Film createFilm(Film film) {
-        log.info("Добавление нового фильма: {}", film.getName());
-        mpaStorage.checkMpa(film.getMpa().getId());
-        genreStorage.checkGenres(film.getGenres());
-        return filmStorage.createFilm(film);
+        log.debug("Добавление нового фильма: {}", film.getName());
+        return this.filmStorage.createFilm(film);
     }
 
-    public Film updateFilm(Film newFilm) {
-        log.info("Обновление фильма с id = {}", newFilm.getId());
-        mpaStorage.checkMpa(newFilm.getMpa().getId());
-        genreStorage.checkGenres(newFilm.getGenres());
-        filmStorage.getFilmById(newFilm.getId());
-        return filmStorage.updateFilm(newFilm);
+    /**
+     * Получить список всех фильмов.
+     *
+     * @return список фильмов.
+     */
+    public Collection<Film> getAllFilms() {
+        log.debug("Получение списка всех фильмов");
+        return this.filmStorage.getAllFilms();
     }
 
-    public Film getFilmById(Long id) {
-        log.info("Получение фильма с id = {}", id);
-        return filmStorage.getFilmById(id);
+    /**
+     * Получить список популярных фильмов, отсортированный по количеству лайков.
+     *
+     * @param count   количество фильмов, которые необходимо получить.
+     * @param genreId идентификатор жанра, по которому необходимо произвести фильтрацию, если предоставлен.
+     * @param year    год выпуска фильма, по которому необходимо произвести фильтрацию, если предоставлен.
+     * @return список фильмов.
+     */
+    public Collection<Film> getPopularFilms(long count, Long genreId, Integer year) {
+        log.debug("Получение списка из {} популярных фильмов", count);
+        return this.filmStorage.getPopularFilms(count, genreId, year);
     }
 
-    public void addLike(Long id, Long userId) {
-        log.info("Добавление лайка фильму с id = {} от пользователя с id = {}", id, userId);
-        userStorage.getUserById(userId);
-        filmStorage.addLike(id, userId);
+    /**
+     * Получить список фильмов, рекомендуемых для пользователя.
+     *
+     * @param userId идентификатор пользователя.
+     * @return список фильмов.
+     */
+    public Collection<Film> getRecommendedFilms(long userId) {
+        throwIfUserNotFound(userId);
+        log.debug("Получение списка рекомендуемых фильмов для пользователя с id = {} ", userId);
+
+        return this.filmStorage.getRecommendedFilms(userId);
     }
 
-    public void deleteLike(Long id, Long userId) {
-        log.info("Удаление лайка фильму с id = {} от пользователя с id = {}", id, userId);
-        userStorage.getUserById(userId);
-        filmStorage.deleteLike(id, userId);
+    /**
+     * Получить фильм по его идентификатору.
+     *
+     * @param filmId идентификатор фильма.
+     * @return фильм.
+     */
+    public Film getFilmById(long filmId) {
+        log.debug("Получение фильма с id = {}", filmId);
+
+        Optional<Film> filmOptional = this.filmStorage.getFilmById(filmId);
+        if (filmOptional.isEmpty()) {
+            throw new NotFoundException(String.format("Фильм с id = %d не найден", filmId));
+        }
+
+        Film film = filmOptional.get();
+        film.setDirectors(this.filmStorage.getFilmDirectors(film.getId()));
+        film.setGenres(this.filmStorage.getFilmGenres(film.getId()));
+
+        return film;
     }
 
-    public List<Film> getPopularFilms(Long count) {
-        log.info("Получение списка из {} популярных фильмов", count);
-        return filmStorage.getPopularFilms(count);
+    /**
+     * Получить список фильмов режиссёра.
+     *
+     * @param directorId идентификатор режиссёра.
+     * @param sortBy     поле, по которому необходимо отсортировать список фильмов.
+     * @return список фильмов.
+     */
+    public Collection<Film> getDirectorFilms(long directorId, SortBy sortBy) {
+        throwIfDirectorNotFound(directorId);
+        log.debug("Получение фильмов режиссёра с id = {}. Сортировка по полю {}", directorId, sortBy);
+
+        return this.filmStorage.getDirectorFilms(directorId, sortBy);
     }
 
-    public Collection<Mpa> getAllMpa() {
-        log.info("Получение списка всех рейтингов");
-        return mpaStorage.getAllMpa();
+    /**
+     * Получить список общих с другом фильмов.
+     *
+     * @param userId   идентификатор пользователя.
+     * @param friendId идентификатор друга.
+     * @return список фильмов.
+     */
+    public Collection<Film> getCommonFilm(long userId, long friendId) {
+        throwIfUserNotFound(userId);
+        throwIfUserNotFound(friendId);
+        log.debug("Получение списка общих фильмов для пользователей с id = {} и id = {}", userId, friendId);
+
+        return this.filmStorage.getCommonFilms(userId, friendId);
     }
 
-    public Mpa getMpaById(Integer id) {
-        log.info("Получение рейтинга с id = {}", id);
-        return mpaStorage.getMpaById(id);
+    /**
+     * Получить список фильмов, подходящих под условие поиска.
+     *
+     * @param query поисковая строка.
+     * @param by    список полей, по которым необходимо произвести поиск.
+     * @return список фильмов.
+     */
+    public Collection<Film> searchFilms(String query, String by) {
+        return this.filmStorage.searchFilms(query, by);
     }
 
-    public Collection<Genre> getAllGenres() {
-        log.info("Получение списка всех жанров");
-        return genreStorage.getAllGenres();
+    /**
+     * Обновить фильм.
+     *
+     * @param film фильм.
+     * @return фильм.
+     */
+    public Film updateFilm(Film film) {
+        this.throwIfFilmNotFound(film.getId());
+        log.debug("Обновление фильма с id = {}", film.getId());
+
+        this.filmStorage.updateFilm(film);
+        return this.getFilmById(film.getId());
     }
 
-    public Genre getGenreById(Integer id) {
-        log.info("Получение жанра с id = {}", id);
-        return genreStorage.getGenreById(id);
+    /**
+     * Удалить фильм.
+     *
+     * @param filmId идентификатор фильма.
+     */
+    public void deleteFilm(Long filmId) {
+        this.throwIfFilmNotFound(filmId);
+        log.debug("Удаление фильма с id = {}", filmId);
+
+        this.filmStorage.deleteFilm(filmId);
     }
+
+    //endregion
+
+    //region Лайки
+
+    /**
+     * Добавить фильму пользовательский лайк.
+     *
+     * @param filmId идентификатор фильма.
+     * @param userId идентификатор пользователя.
+     */
+    public void addLikeToFilm(long filmId, long userId) {
+        this.throwIfFilmNotFound(filmId);
+        this.throwIfUserNotFound(userId);
+
+        if (this.filmStorage.isLikeExist(filmId, userId)) {
+            this.eventStorage.createEvent(userId, EventType.LIKE, EventOperation.ADD, filmId);
+            return;
+        }
+
+        log.debug("Добавление лайка фильму с id = {} от пользователя с id = {}", filmId, userId);
+
+        this.filmStorage.addLikeToFilm(filmId, userId);
+        this.eventStorage.createEvent(userId, EventType.LIKE, EventOperation.ADD, filmId);
+    }
+
+    /**
+     * Удалить у фильма пользовательский лайк.
+     *
+     * @param filmId идентификатор фильма.
+     * @param userId идентификатор пользователя.
+     */
+    public void removeLikeFromFilm(long filmId, long userId) {
+        this.throwIfFilmNotFound(filmId);
+        this.throwIfUserNotFound(userId);
+
+        if (!this.filmStorage.isLikeExist(filmId, userId)) {
+            this.eventStorage.createEvent(userId, EventType.LIKE, EventOperation.REMOVE, filmId);
+            return;
+        }
+
+        log.debug("Удаление лайка фильму с id = {} от пользователя с id = {}", filmId, userId);
+
+        this.filmStorage.removeLikeFromFilm(filmId, userId);
+        this.eventStorage.createEvent(userId, EventType.LIKE, EventOperation.REMOVE, filmId);
+    }
+
+    //endregion
+
+    //region Facilities
+
+    /**
+     * Выбросить исключение, если пользователь не найден.
+     *
+     * @param directorId идентификатор пользователя.
+     */
+    private void throwIfDirectorNotFound(long directorId) {
+        if (this.directorStorage.getDirectorById(directorId).isEmpty()) {
+            throw new NotFoundException(String.format("Режиссёр с id = %d не найден", directorId));
+        }
+    }
+
+    /**
+     * Выбросить исключение, если фильм не найден.
+     *
+     * @param filmId идентификатор фильма.
+     */
+    private void throwIfFilmNotFound(long filmId) {
+        if (this.filmStorage.getFilmById(filmId).isEmpty()) {
+            throw new NotFoundException(String.format("Фильм с id = %d не найден", filmId));
+        }
+    }
+
+    /**
+     * Выбросить исключение, если пользователей не найден.
+     *
+     * @param userId идентификатор пользователя.
+     */
+    private void throwIfUserNotFound(long userId) {
+        if (this.userStorage.getUserById(userId).isEmpty()) {
+            throw new NotFoundException(String.format("Пользователь с id = %d не найден", userId));
+        }
+    }
+
+    //endregion
 }

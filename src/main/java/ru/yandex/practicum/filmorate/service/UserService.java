@@ -3,70 +3,181 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dao.EventRepository;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.model.EventOperation;
+import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.FriendsStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Optional;
 
-@Slf4j
-@Service
+/**
+ * Сервис для работы с пользователями.
+ */
 @RequiredArgsConstructor
-public class UserService {
+@Service
+@Slf4j
+public final class UserService {
+    /**
+     * Хранилище пользователей.
+     */
     private final UserStorage userStorage;
-    private final FriendsStorage friendsStorage;
 
-    public Collection<User> getAllUsers() {
-        log.info("Получение списка всех пользователей");
-        return userStorage.getAllUsers();
-    }
+    private final EventRepository eventRepository;
 
+    //region Пользователи
+
+    /**
+     * Создать нового пользователя.
+     *
+     * @param user пользователь.
+     * @return пользователь.
+     */
     public User createUser(User user) {
-        log.info("Добавление нового пользователя: {}", user.getLogin());
-        if (user.getName() == null) {
+        log.debug("Добавление нового пользователя с логином {}", user.getLogin());
+
+        if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
+
         return userStorage.createUser(user);
     }
 
-    public User updateUser(User newUser) {
-        log.info("Обновление пользователя с id = {}", newUser.getId());
-        if (newUser.getName() == null) {
-            newUser.setName(newUser.getLogin());
+    /**
+     * Получить список всех пользователей.
+     *
+     * @return список пользователей.
+     */
+    public Collection<User> getAllUsers() {
+        log.debug("Получение списка всех пользователей");
+        return userStorage.getAllUsers();
+    }
+
+    /**
+     * Получить пользователя по его идентификатору.
+     *
+     * @param userId идентификатор пользователя.
+     * @return пользователь.
+     */
+    public User getUserById(long userId) {
+        log.debug("Получение пользователя с id = {}", userId);
+
+        Optional<User> userOptional = this.userStorage.getUserById(userId);
+        if (userOptional.isEmpty()) {
+            throw new NotFoundException(String.format("Пользователь с id = %d не найден", userId));
         }
-        return userStorage.updateUser(newUser);
+
+        return userOptional.get();
     }
 
-    public User getUserById(Long id) {
-        log.info("Получение пользователя с id = {}", id);
-        return userStorage.getUserById(id);
+    /**
+     * Обновить пользователя.
+     *
+     * @param user пользователь.
+     * @return пользователь.
+     */
+    public User updateUser(User user) {
+        this.throwIfUsersNotFound(user.getId());
+        log.debug("Обновление пользователя с id = {}", user.getId());
+
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
+
+        this.userStorage.updateUser(user);
+        return this.getUserById(user.getId());
     }
 
-    public void addFriend(Long id, Long friendId) {
-        log.info("Добавление пользователя с id = {} в друзья к пользователю с id = {}", friendId, id);
-        userStorage.getUserById(id);
-        userStorage.getUserById(friendId);
-        friendsStorage.addFriend(id, friendId);
+    /**
+     * Удалить пользователя.
+     *
+     * @param userId идентификатор пользователя.
+     */
+    public void deleteUser(long userId) {
+        this.throwIfUsersNotFound(userId);
+        log.debug("Удаление пользователя с id = {}", userId);
+
+        this.userStorage.deleteUser(userId);
     }
 
-    public void deleteFriend(Long id, Long friendId) {
-        log.info("Удаление пользователя с id = {} из друзей пользователя с id = {}", friendId, id);
-        userStorage.getUserById(id);
-        userStorage.getUserById(friendId);
-        friendsStorage.deleteFriend(id, friendId);
+    //endregion
+
+    // region Друзья
+
+    /**
+     * Добавить пользователя в друзья.
+     *
+     * @param userId   идентификатор пользователя.
+     * @param friendId идентификатор друга.
+     */
+    public void addFriend(long userId, long friendId) {
+        this.throwIfUsersNotFound(userId);
+        this.throwIfUsersNotFound(friendId);
+        log.debug("Добавление пользователя с id = {} в друзья к пользователю с id = {}", friendId, userId);
+
+        this.userStorage.addFriend(userId, friendId);
+        this.eventRepository.createEvent(userId, EventType.FRIEND, EventOperation.ADD, friendId);
     }
 
-    public List<User> getFriends(Long id) {
-        log.info("Получение списка друзей пользователя с id = {}", id);
-        userStorage.getUserById(id);
-        return friendsStorage.getFriends(id);
+    /**
+     * Получить список друзей пользователя по идентификатору пользователя.
+     *
+     * @param userId идентификатор пользователя.
+     * @return список пользователей.
+     */
+    public Collection<User> getFriends(long userId) {
+        this.throwIfUsersNotFound(userId);
+        log.debug("Получение списка друзей пользователя с id = {}", userId);
+
+        return this.userStorage.getFriends(userId);
     }
 
-    public List<User> getCommonFriends(Long id, Long otherId) {
-        log.info("Получение списка общих друзей пользователей с id = {} и с id = {}", id, otherId);
-        userStorage.getUserById(id);
-        userStorage.getUserById(otherId);
-        return friendsStorage.getCommonFriends(id, otherId);
+    /**
+     * Получить список общих друзей двух пользователей.
+     *
+     * @param firstUserId  идентификатор первого пользователя.
+     * @param secondUserId идентификатор второго пользователя.
+     * @return список пользователей.
+     */
+    public Collection<User> getCommonFriends(long firstUserId, long secondUserId) {
+        this.throwIfUsersNotFound(firstUserId);
+        this.throwIfUsersNotFound(secondUserId);
+        log.debug("Получение списка общих друзей пользователей с идентификаторами {} и {}", firstUserId, secondUserId);
+
+        return userStorage.getCommonFriends(firstUserId, secondUserId);
     }
+
+    /**
+     * Удалить пользователя из друзей.
+     *
+     * @param userId   идентификатор пользователя.
+     * @param friendId идентификатор друга.
+     */
+    public void deleteFriend(long userId, long friendId) {
+        this.throwIfUsersNotFound(userId);
+        this.throwIfUsersNotFound(friendId);
+        log.debug("Удаление пользователя с id = {} из друзей пользователя с id = {}", friendId, userId);
+
+        this.userStorage.deleteFriend(userId, friendId);
+        this.eventRepository.createEvent(userId, EventType.FRIEND, EventOperation.REMOVE, friendId);
+    }
+
+    //endregion
+
+    //region Facilities
+
+    /**
+     * Выбросить исключение, если пользователь не найден.
+     *
+     * @param userId идентификатор пользователя.
+     */
+    private void throwIfUsersNotFound(long userId) {
+        if (this.userStorage.getUserById(userId).isEmpty()) {
+            throw new NotFoundException(String.format("Пользователь с id = %d не найден", userId));
+        }
+    }
+
+    //endregion
 }

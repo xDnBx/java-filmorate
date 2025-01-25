@@ -8,13 +8,12 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.dao.UserRepository;
-import ru.yandex.practicum.filmorate.dao.mappers.UserMapper;
+import ru.yandex.practicum.filmorate.dao.mapper.UserMapper;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.Collection;
-import java.util.HashSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +33,6 @@ class FilmorateApplicationTests {
                 .login("yandex")
                 .name("Yandex Practicum")
                 .birthday(LocalDate.of(1990, Month.MAY, 28))
-                .friends(new HashSet<>())
                 .build();
     }
 
